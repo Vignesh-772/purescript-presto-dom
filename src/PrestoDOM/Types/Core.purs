@@ -22,27 +22,25 @@ module PrestoDOM.Types.Core
 
 import Prelude
 
-import Data.Tuple (Tuple)
 import Data.Either (Either)
 import Data.Maybe (Maybe)
 import Data.Newtype (class Newtype)
+import Data.Tuple (Tuple)
 import Effect (Effect)
-import Presto.Core.Utils.Encoding (unsafeStringify)
-
-import Halogen.VDom.DOM.Prop (Prop, PropValue, propFromBoolean, propFromInt, propFromNumber, propFromString)
+import Foreign (Foreign)
+import Foreign.Class (encode)
+import Foreign.Object as Object
 import Halogen.VDom.DOM.Prop (Prop) as VDom
+import Halogen.VDom.DOM.Prop (Prop, PropValue, propFromBoolean, propFromInt, propFromNumber, propFromString)
 import Halogen.VDom.Thunk (Thunk)
 import Halogen.VDom.Types (VDom(..), ElemName(..), Namespace(..)) as VDom
 import Halogen.VDom.Types (VDom)
-import PrestoDOM.Types.DomAttributes (BottomSheetState, Corners, Font, Gradient, Gravity, InputType, Length, LetterSpacing, LineSpacing, Margin, Orientation, Padding, Position, Shadow, Shimmer, Typeface, Visibility, renderBottomSheetState, renderCorners, renderFont, renderGradient, renderGravity, renderInputType, renderLength, renderLetterSpacing,renderLineSpacing, renderMargin, renderOrientation, renderPadding, renderPosition, renderShadow, renderShimmer, renderTypeface, renderVisibility)
-import PrestoDOM.Types.DomAttributes (BottomSheetState(..), Corners(..), Font(..), Gradient(..), Gravity(..), InputType(..), Length(..), LetterSpacing(..), LineSpacing(..), Margin(..), Orientation(..), Padding(..), Position(..), Shadow(..), Shimmer, Typeface(..), Visibility(..), renderBottomSheetState, renderCorners, renderFont, renderGradient, renderGravity, renderInputType, renderLength, renderLetterSpacing, renderLineSpacing, renderMargin, renderOrientation, renderPadding, renderPosition, renderShadow, renderShimmer, renderTypeface, renderVisibility) as Types
-{-- data Thunk b = Thunk b (b → Effect DOM.Node) --}
+import Presto.Core.Utils.Encoding (unsafeStringify)
+import PrestoDOM.Types.DomAttributes (BottomSheetState(..), Corners(..), Font(..), FontWeight(..), Gradient(..), Gravity(..), InputType(..), Length(..), LetterSpacing(..), LineSpacing(..), Margin(..), Orientation(..), Padding(..), Position(..), Shadow(..), Shimmer, Typeface(..), Visibility(..), renderBottomSheetState, renderCorners, renderFont, renderFontWeight, renderGradient, renderGravity, renderInputType, renderLength, renderLetterSpacing, renderLineSpacing, renderMargin, renderOrientation, renderPadding, renderPosition, renderShadow, renderShimmer, renderTypeface, renderVisibility) as Types
+import PrestoDOM.Types.DomAttributes (BottomSheetState, Corners, Font, FontWeight, Gradient, Gravity, InputType, Length, LetterSpacing, LineSpacing, Margin, Orientation, Padding, Position, Shadow, Shimmer, Typeface, Visibility, renderBottomSheetState, renderCorners, renderFont, renderFontWeight, renderGradient, renderGravity, renderInputType, renderLength, renderLetterSpacing, renderLineSpacing, renderMargin, renderOrientation, renderPadding, renderPosition, renderShadow, renderShimmer, renderTypeface, renderVisibility)
 import Tracker (trackAction)
-import Tracker.Types (Level(..), Action(..)) as T
 import Tracker.Labels (Label(..)) as L
-import Foreign(Foreign)
-import Foreign.Class (encode)
-import Foreign.Object as Object
+import Tracker.Types (Level(..), Action(..)) as T
 import Unsafe.Coerce (unsafeCoerce)
 
 newtype PrestoWidget a = PrestoWidget (VDom (Array (Prop a)) (Thunk PrestoWidget a))
@@ -181,3 +179,6 @@ instance bottomSheetStateIsProp :: IsProp BottomSheetState where
 
 instance letterSpacingIsProp :: IsProp LetterSpacing where
   toPropValue = propFromString <<< renderLetterSpacing
+
+instance fontWeightIsProp :: IsProp FontWeight where
+  toPropValue = propFromString <<< renderFontWeight

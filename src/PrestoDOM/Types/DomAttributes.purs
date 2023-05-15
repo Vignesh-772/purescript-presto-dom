@@ -2,12 +2,13 @@ module PrestoDOM.Types.DomAttributes
   ( BottomSheetState(..)
   , Corners(..)
   , Font(..)
+  , FontWeight(..)
   , Gradient(..)
   , Gravity(..)
   , InputType(..)
   , Length(..)
-  , LineSpacing(..)
   , LetterSpacing(..)
+  , LineSpacing(..)
   , Margin(..)
   , Orientation(..)
   , Padding(..)
@@ -24,6 +25,20 @@ module PrestoDOM.Types.DomAttributes
   , baseColor
   , clipToChildren
   , colorBuilder
+  , decodeCornersUtil
+  , decodeFontUtil
+  , decodeGradientUtil
+  , decodeGravityUtil
+  , decodeInputTypeUtil
+  , decodeLengthUtil
+  , decodeLetterSpacingUtil
+  , decodeMarginUtil
+  , decodeOrientationUtil
+  , decodePaddingUtil
+  , decodePositionUtil
+  , decodeShadowUtil
+  , decodeTypefaceUtil
+  , decodeVisibilityUtil
   , direction
   , dropOff
   , duration
@@ -34,6 +49,7 @@ module PrestoDOM.Types.DomAttributes
   , renderBottomSheetState
   , renderCorners
   , renderFont
+  , renderFontWeight
   , renderGradient
   , renderGravity
   , renderInputType
@@ -56,20 +72,6 @@ module PrestoDOM.Types.DomAttributes
   , toSafeInt
   , toSafeObject
   , toSafeString
-  , decodeLengthUtil
-  , decodeInputTypeUtil
-  , decodeOrientationUtil
-  , decodeVisibilityUtil
-  , decodeGravityUtil
-  , decodeMarginUtil
-  , decodePaddingUtil
-  , decodeGradientUtil
-  , decodeShadowUtil
-  , decodeCornersUtil
-  , decodeFontUtil
-  , decodeLetterSpacingUtil
-  , decodePositionUtil
-  , decodeTypefaceUtil
   )
   where
 
@@ -657,6 +659,15 @@ renderLineSpacing = case _ of
     LineSpacing extra multiplier      -> (show extra) <> "," <> (show multiplier)
     LineSpacingExtra extra            -> (show extra) <> ",1.0"
     LineSpacingMultiplier multiplier  -> "0," <> (show multiplier)
+
+data FontWeight 
+  = FontWeight Int
+  | FontWeightWithItalic Int Boolean
+
+renderFontWeight :: FontWeight -> String
+renderFontWeight = case _ of
+  FontWeight weight -> (show weight) <> "," <> "false"
+  FontWeightWithItalic weight italic -> (show weight) <> "," <> (show italic)
 
 data BottomSheetState
  = EXPANDED
