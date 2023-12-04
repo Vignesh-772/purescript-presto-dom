@@ -31,6 +31,7 @@ module PrestoDOM.List
   , preComputeListItemWithFragment
   , animationSetHolder
   , testIdHolder
+  , strokeHolder
   ) where
 
 import Prelude
@@ -285,6 +286,9 @@ colorHolder = prop (PropName "holder_color")
 
 visibilityHolder :: forall i. String -> P.Prop i
 visibilityHolder = prop (PropName "holder_visibility")
+
+strokeHolder :: forall i. String -> P.Prop i
+strokeHolder = prop (PropName "holder_stroke")
 
 textSizeHolder :: forall i. String -> P.Prop i
 textSizeHolder = prop (PropName "holder_textSize")
