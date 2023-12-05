@@ -23,7 +23,7 @@ import FRP.Event as E
 import Foreign (Foreign, isUndefined, unsafeToForeign)
 import Foreign.Generic (encode, decode, class Decode)
 import Foreign.NullOrUndefined (undefined)
-import Foreign.Object (Object, update, insert, delete, isEmpty, lookup)
+import Foreign.Object (Object, update, insert, delete, isEmpty, lookup, empty)
 import Halogen.VDom (Step, VDom, VDomSpec(..), buildVDom, extract, step)
 import Halogen.VDom.DOM.Prop (buildProp)
 import Halogen.VDom.Thunk (Thunk, buildThunk)
@@ -34,9 +34,9 @@ import PrestoDOM.Types.Core (class Loggable, PrestoWidget(..), Prop, ScopedScree
 import Presto.Core.Types.Language.Flow (setLogField)
 import PrestoDOM.Utils (continue, logAction, addTime2, performanceMeasure, isGenerateVdom)
 import PrestoDOM.Generate (generateMyDom)
-import Tracker (trackScreen, trackLifeCycle)
+import Tracker (trackScreen, trackLifeCycle, trackAction)
 import Tracker.Labels as L
-import Tracker.Types (Level(..), Screen(..), Lifecycle(..)) as T
+import Tracker.Types (Level(..), Screen(..), Lifecycle(..), Action(System)) as T
 import Unsafe.Coerce (unsafeCoerce)
 
 import PrestoDOM.Core.Types (InsertState, UpdateActions, VdomTree)
@@ -321,6 +321,7 @@ renderOrPatch :: forall action state returnType
   -> Boolean -> Boolean
   -> Maybe (PrestoDOM (Effect Unit) (Thunk PrestoWidget (Effect Unit))) -> Aff Unit
 renderOrPatch {event, push} st@{ initialState, view, name , parent } true isCache maybeMyDom = do
+  _ <-  liftEffect $ trackAction T.System T.Debug L.STATUS "framework" (unsafeToForeign {function : "renderOrPatch"}) empty
   let myDom = fromMaybe' (\_ -> (view push initialState)) maybeMyDom
   let vdomMode = isJust maybeMyDom
   ns <- liftEffect $ sanitiseNamespace parent
@@ -334,6 +335,7 @@ renderOrPatch {event, push} st@{ initialState, view, name , parent } true isCach
       setPatchToActive ns name
       EFn.runEffectFn1 attachUrlImages (ns <> name)
     Nothing -> do
+      _ <-  liftEffect $ trackAction T.System T.Debug L.STATUS "framework" (unsafeToForeign {function : "renderOrPatch", flow : "cached machine not found"}) empty
       machine <- liftEffect $ EFn.runEffectFn1 (buildVDom (spec ns name)) myDom
       liftEffect $ EFn.runEffectFn3 storeMachine machine name ns
       insertState <- liftEffect $ EFn.runEffectFn4 insertDom ns name (extract machine) isCache

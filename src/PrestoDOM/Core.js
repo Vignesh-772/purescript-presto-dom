@@ -1261,6 +1261,7 @@ export const addViewToParent = function (insertObject) {
     window.parent.serverSideKeys = window.parent.serverSideKeys || {};
     window.parent.serverSideKeys.vdom = JSON.stringify(insertObject);
   }
+  tracker._trackAction("system")("debug")("status")({"function" : "addViewToParent"})();
   AndroidWrapper.addViewToParent(
     insertObject.rootId,
     window.__OS == "ANDROID" ? JSON.stringify(dom) : dom,
@@ -1305,6 +1306,7 @@ export const attachScreen = function(namespace, _name, dom){
     console.error("Call initUI for namespace :: " + namespace + "before triggering run/show screen")
     return;
   }
+  tracker._trackAction("system")("debug")("status")({"function" : "attachScreen"})();
   if (window.__OS == "ANDROID") {
     var rootId = getScopedState(namespace).stackRoot;
     var len = getScopedState(namespace).screenStack.length;
@@ -2307,6 +2309,7 @@ export const getCachedMachineImpl = function(just,nothing,namespace,screenName) 
  * @return {void}
  */
 export const addScreenWithAnim = function (dom,  screenName, namespace){
+  tracker._trackAction("system")("debug")("status")({"function" : "addScreenWithAnim"})();
   if (window.__OS == "ANDROID") {
   //   var namespace = getNamespace(namespace_);
     if(!state.isPreRenderEnabled) namespace = getNamespace(namespace)
@@ -2359,10 +2362,13 @@ export const startedToPrepare = function(namespace, screenName){
 }
 
 export const awaitPrerenderFinished = function(namespace, screenName, cb){
+  tracker._trackAction("system")("debug")("status")({"function" : "awaitPrerenderFinished"})();
   if(getConstState(namespace) && getConstState(namespace)[screenName] && getConstState(namespace)[screenName].prepareStarted){
     getConstState(namespace)[screenName].prepareStartedQueue = getConstState(namespace)[screenName].prepareStartedQueue || [];
     getConstState(namespace)[screenName].prepareStartedQueue.push(cb);
+    tracker._trackAction("system")("debug")("status")({"function" : "awaitPrerenderFinished", "flow" : "waiting for prerender to complete"})();
   }else{
+    tracker._trackAction("system")("debug")("status")({"function" : "awaitPrerenderFinished", "flow" : "prerender completed"})();
     cb();
   }
 }
