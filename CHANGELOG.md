@@ -1,3 +1,10 @@
+## [2.7.2](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/compare/v2.7.1...v2.7.2) (2023-12-05)
+
+
+### Bug Fixes
+
+* PICAF-25297: adding loglines to track framework flow ([d4beb5f](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/commit/d4beb5f67b44907b7e39acaa04490b8517fc71c4))
+
 ## [2.7.1](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/compare/v2.7.0...v2.7.1) (2023-12-04)
 
 
