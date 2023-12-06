@@ -25,6 +25,8 @@ module PrestoDOM.Types.DomAttributes
   , JustifyContent(..)
   , AlignItems(..)
   , AlignContent(..)
+  , OverScrollMode (..)
+  , PageTransformer(..)
   , __IS_ANDROID
   , active
   , alphaBuilder
@@ -67,6 +69,8 @@ module PrestoDOM.Types.DomAttributes
   , renderJustifyContent
   , renderAlignItems
   , renderAlignContent
+  , renderOverScrollMode
+  , renderPageTransformer
   , repeatCount
   , repeatDelay
   , shape
@@ -95,6 +99,8 @@ module PrestoDOM.Types.DomAttributes
   , decodeJustifyContentUtil
   , decodeAlignItemsUtil
   , decodeAlignContentUtil
+  , decodePageTransformerUtil
+  , decodeOverScrollModeUtil
   )
   where
 
@@ -1399,3 +1405,94 @@ renderAlignContent = case _ of
     CONTENT_BETWEEN -> "space_between"
     CONTENT_AROUND -> "space_arounde"
     CONTENT_STRETCH -> "stretch"
+
+
+data OverScrollMode = OVER_SCROLL_NEVER
+  | OVER_SCROLL_IF_CONTENT_SCROLLS
+  | OVER_SCROLL_ALWAYS
+
+derive instance genericOverScrollMode :: Generic OverScrollMode _
+instance encodeOverScrollMode :: Encode OverScrollMode where encode = renderOverScrollMode >>> unsafeToForeign
+instance showOverScrollMode :: Show OverScrollMode where show = genericShow
+instance decodeOverScrollMode :: Decode OverScrollMode where decode = decodeOverScrollModeUtil <<< toSafeString <<< unsafeFromForeign
+
+
+decodeOverScrollModeUtil :: forall a. Applicative a => String -> ExceptT (NonEmptyList ForeignError) a OverScrollMode
+decodeOverScrollModeUtil json =
+  if isUndefined json then
+    (except <<< Left <<< singleton <<< ForeignError) "OverScrollMode is not defined"
+  else
+    except $
+    case toLower json of
+      "never" -> Right OVER_SCROLL_NEVER
+      "if_content_scroll" -> Right OVER_SCROLL_IF_CONTENT_SCROLLS
+      "always" -> Right OVER_SCROLL_ALWAYS
+      _             -> (Left <<< singleton <<< ForeignError) "OverScrollMode is not supported"
+
+renderOverScrollMode :: OverScrollMode -> String
+renderOverScrollMode = case _ of
+    OVER_SCROLL_NEVER -> "never"
+    OVER_SCROLL_IF_CONTENT_SCROLLS -> "if_content_scroll"
+    OVER_SCROLL_ALWAYS -> "always"
+
+
+data PageTransformer = ANTI_CLOCK_SPIN
+  | CLOCK_SPIN
+  | CUBE_IN_DEPTH
+  | CUBE_IN_ROTATION
+  | CUBE_IN_SCALING
+  | CUBE_OUT_DEPTH
+  | CUBE_OUT_ROTATION
+  | CUBE_OUT_SCALING
+  | DEPTH
+  | FADE_OUT
+  | FAN
+  | FIDGET_SPIN
+  | GATE
+  | HINGE
+  | HORIZONTAL_FLIP
+  | POP
+  | SPINNER
+  | TOSS
+  | VERTICAL_FLIP
+  | VERTICAL_SHUT
+  | ZOOM_OUT
+
+
+derive instance genericPageTransformer :: Generic PageTransformer _
+instance encodePageTransformer :: Encode PageTransformer where encode = renderPageTransformer >>> unsafeToForeign
+instance showPageTransformer :: Show PageTransformer where show = genericShow
+instance decodePageTransformer :: Decode PageTransformer where decode = decodePageTransformerUtil <<< toSafeString <<< unsafeFromForeign
+
+
+decodePageTransformerUtil :: forall a. Applicative a => String -> ExceptT (NonEmptyList ForeignError) a PageTransformer
+decodePageTransformerUtil json =
+  if isUndefined json then
+    (except <<< Left <<< singleton <<< ForeignError) "PageTransformer is not defined"
+  else
+    except $
+    case toLower json of
+      "CLOCK_SPIN" -> Right CLOCK_SPIN
+      "CUBE_IN_DEPTH" -> Right CUBE_IN_DEPTH
+      "CUBE_IN_ROTATION" -> Right CUBE_IN_ROTATION
+      "CUBE_IN_SCALING" -> Right CUBE_IN_SCALING
+      "CUBE_OUT_DEPTH" -> Right CUBE_OUT_DEPTH
+      "CUBE_OUT_ROTATION" -> Right CUBE_OUT_ROTATION
+      "CUBE_OUT_SCALING" -> Right CUBE_OUT_SCALING
+      "DEPTH" -> Right DEPTH
+      "FADE_OUT" -> Right FADE_OUT
+      "FAN" -> Right FAN
+      "FIDGET_SPIN" -> Right FIDGET_SPIN
+      "GATE" -> Right GATE
+      "HINGE" -> Right HINGE
+      "HORIZONTAL_FLIP" -> Right HORIZONTAL_FLIP
+      "POP" -> Right POP
+      "SPINNER" -> Right SPINNER
+      "TOSS" -> Right TOSS
+      "VERTICAL_FLIP" -> Right VERTICAL_FLIP
+      "VERTICAL_SHUT" -> Right VERTICAL_SHUT
+      "ZOOM_OUT" -> Right ZOOM_OUT
+      _             -> (Left <<< singleton <<< ForeignError) "PageTransformer is not supported"
+
+renderPageTransformer :: PageTransformer -> String
+renderPageTransformer = show

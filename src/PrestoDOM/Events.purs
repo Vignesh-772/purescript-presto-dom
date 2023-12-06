@@ -32,6 +32,8 @@ module PrestoDOM.Events
     , onPageScrolled
     , onPageScrollStateChanged
     , onPageSelected
+    , onPatch
+    , onTouch
     ) where
 
 import Prelude
@@ -103,6 +105,9 @@ backPressHandler = \_ -> do
 
 onClick :: forall a. (a ->  Effect Unit) -> (Unit -> a) -> Prop (Effect Unit)
 onClick push f = event (DOM.EventType "onClick") (Just <<< (makeEvent (push <<< f)))
+
+onTouch :: forall a. (a ->  Effect Unit) -> (Unit -> a) -> Prop (Effect Unit)
+onTouch push f = event (DOM.EventType "onTouch") (Just <<< (makeEvent (push <<< f)))
 
 onInspectClick :: String -> Prop (Effect Unit)
 onInspectClick f = event (DOM.EventType "onInspectClick") (Just <<< (makeEvent' emitComponentConfig f))
@@ -218,11 +223,10 @@ onSlide push f = event (DOM.EventType "onSlide") (Just <<< (makeEvent (push <<< 
 onStateChanged :: forall a. (a -> Effect Unit ) -> (String -> a) -> Prop (Effect Unit)
 onStateChanged push f = event (DOM.EventType "onStateChanged") (Just <<< (makeEvent (push <<< f)))
 
-
-onPageSelected :: forall a. (a -> Effect Unit ) -> (Int -> a) -> Prop (Effect Unit)
+onPageSelected :: forall a. (a -> Effect Unit ) -> (String -> a) -> Prop (Effect Unit)
 onPageSelected push f = event (DOM.EventType "onPageSelected") (Just <<< (makeEvent (push <<< f)))
 
-onPageScrollStateChanged :: forall a. (a -> Effect Unit ) -> (Int -> a) -> Prop (Effect Unit)
+onPageScrollStateChanged :: forall a. (a -> Effect Unit ) -> (String -> a) -> Prop (Effect Unit)
 onPageScrollStateChanged push f = event (DOM.EventType "onPageScrollStateChanged") (Just <<< (makeEvent (push <<< f)))
 
 onPageScrolled :: forall a. (a -> Effect Unit ) -> (String -> a) -> Prop (Effect Unit)
@@ -230,6 +234,9 @@ onPageScrolled push f = event (DOM.EventType "onPageScrolled") (Just <<< (makeEv
 
 onAnimationEnd :: forall a. (a ->  Effect Unit) -> (String -> a) -> Prop (Effect Unit)
 onAnimationEnd push f = event (DOM.EventType "onAnimationEnd") (Just <<< (makeEvent (push <<< f)))
+
+onPatch :: forall a b. (a -> Effect Unit) -> (b -> a) -> Prop (Effect Unit)
+onPatch push f = event (DOM.EventType "onPatch") (Just <<< (makeEvent (push <<< f)))
 
 {-- attachTimerHandler --}
 {--     :: forall eff a --}

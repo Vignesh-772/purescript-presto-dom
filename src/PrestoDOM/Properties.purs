@@ -107,8 +107,10 @@ module PrestoDOM.Properties
   , nestedScrollView
   , numFrames
   , orientation
+  , overScrollMode
   , packageIcon
   , padding
+  , pageTransformer
   , pattern
   , payload
   , peakHeight
@@ -132,6 +134,7 @@ module PrestoDOM.Properties
   , scrollBarVisible
   , scrollBarX
   , scrollBarY
+  , scrollDirection
   , selectable
   , selectableItem
   , selected
@@ -193,7 +196,7 @@ import Prelude
 import Data.String (toLower)
 import Halogen.VDom.DOM.Prop (Prop(..))
 import PrestoDOM.Types.Core (class IsProp, Gradient, Gravity, InputType, Length, Margin, Orientation, Padding, Position, PropName(..), Shadow, Typeface, Visibility, FlexDirection, JustifyContent, AlignContent, AlignItems, FlexWrap, toPropValue)
-import PrestoDOM.Types.DomAttributes (ImageUrl, BottomSheetState, Corners, Font(..), FontWeight, LetterSpacing, LineSpacing, Accessiblity, Shimmer, __IS_ANDROID)
+import PrestoDOM.Types.DomAttributes (ImageUrl, BottomSheetState, Corners, Font(..), FontWeight, LetterSpacing, LineSpacing, Accessiblity, Shimmer, OverScrollMode, PageTransformer, __IS_ANDROID)
 
 
 prop :: forall value i. IsProp value => PropName value -> value -> Prop i
@@ -950,3 +953,12 @@ selectAllOnFocus = prop (PropName "selectAllOnFocus")
 -- | View Pager Current Item
 currentItem :: ∀ i. Int -> Prop i
 currentItem = prop (PropName "currentItem")
+
+overScrollMode :: ∀ i. OverScrollMode -> Prop i
+overScrollMode = prop (PropName "overScrollMode")
+
+scrollDirection :: forall i. Orientation -> Prop i
+scrollDirection = prop (PropName "scrollDirection")
+
+pageTransformer :: forall i. PageTransformer -> Prop i
+pageTransformer = prop (PropName "pageTransformer")

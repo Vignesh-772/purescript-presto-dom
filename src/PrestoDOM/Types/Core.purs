@@ -33,8 +33,8 @@ import Halogen.VDom.DOM.Prop (Prop) as VDom
 import Halogen.VDom.Thunk (Thunk)
 import Halogen.VDom.Types (VDom(..), ElemName(..), Namespace(..)) as VDom
 import Halogen.VDom.Types (VDom)
-import PrestoDOM.Types.DomAttributes (ImageUrl, renderImageUrl, BottomSheetState, Corners, Font, FontWeight, Gradient, Gravity, InputType, Length, LetterSpacing, LineSpacing, Margin, Orientation, Padding, Position, Shadow, Shimmer, Typeface, Visibility, Accessiblity, FlexDirection, JustifyContent, AlignContent, AlignItems, FlexWrap, renderBottomSheetState, renderCorners, renderFont, renderGradient, renderGravity, renderInputType, renderLength, renderLetterSpacing,renderLineSpacing, renderMargin, renderOrientation, renderPadding, renderPosition, renderShadow, renderShimmer, renderTypeface, renderVisibility, renderAccessiblity, renderFontWeight, renderFlexDirection, renderJustifyContent, renderAlignContent, renderAlignItems, renderFlexWrap)
-import PrestoDOM.Types.DomAttributes (ImageUrl(..), nameFromImage, urlFromImage, isImageUrlEmpty, BottomSheetState(..), Corners(..), Font(..), FontWeight(..), Gradient(..), Gravity(..), InputType(..), Length(..), LetterSpacing(..), LineSpacing(..), Margin(..), Orientation(..), Padding(..), Position(..), Shadow(..), Shimmer, Typeface(..), Visibility(..), Accessiblity(..), FlexDirection(..), JustifyContent(..), AlignContent(..), AlignItems(..), FlexWrap(..), renderBottomSheetState, renderCorners, renderFont, renderGradient, renderGravity, renderInputType, renderLength, renderLetterSpacing, renderLineSpacing, renderMargin, renderOrientation, renderPadding, renderPosition, renderShadow, renderShimmer, renderTypeface, renderVisibility, renderAccessiblity, renderFlexDirection, renderJustifyContent, renderAlignContent, renderAlignItems, renderFlexWrap) as Types
+import PrestoDOM.Types.DomAttributes (ImageUrl, renderImageUrl, BottomSheetState, Corners, Font, FontWeight, Gradient, Gravity, InputType, Length, LetterSpacing, LineSpacing, Margin, Orientation, Padding, Position, Shadow, Shimmer, Typeface, Visibility, Accessiblity, FlexDirection, JustifyContent, AlignContent, AlignItems, FlexWrap, OverScrollMode, PageTransformer, renderBottomSheetState, renderCorners, renderFont, renderGradient, renderGravity, renderInputType, renderLength, renderLetterSpacing,renderLineSpacing, renderMargin, renderOrientation, renderPadding, renderPosition, renderShadow, renderShimmer, renderTypeface, renderVisibility, renderAccessiblity, renderFontWeight, renderFlexDirection, renderJustifyContent, renderAlignContent, renderAlignItems, renderFlexWrap, renderOverScrollMode, renderPageTransformer)
+import PrestoDOM.Types.DomAttributes (ImageUrl(..), nameFromImage, urlFromImage, isImageUrlEmpty, BottomSheetState(..), Corners(..), Font(..), FontWeight(..), Gradient(..), Gravity(..), InputType(..), Length(..), LetterSpacing(..), LineSpacing(..), Margin(..), Orientation(..), Padding(..), Position(..), Shadow(..), Shimmer, Typeface(..), Visibility(..), Accessiblity(..), FlexDirection(..), JustifyContent(..), AlignContent(..), AlignItems(..), FlexWrap(..), OverScrollMode(..), PageTransformer(..), renderBottomSheetState, renderCorners, renderFont, renderGradient, renderGravity, renderInputType, renderLength, renderLetterSpacing, renderLineSpacing, renderMargin, renderOrientation, renderPadding, renderPosition, renderShadow, renderShimmer, renderTypeface, renderVisibility, renderAccessiblity, renderFlexDirection, renderJustifyContent, renderAlignContent, renderAlignItems, renderFlexWrap, renderOverScrollMode, renderPageTransformer) as Types
 {-- data Thunk b = Thunk b (b → Effect DOM.Node) --}
 import Tracker (trackAction)
 import Tracker.Types (Level(..), Action(..)) as T
@@ -184,3 +184,9 @@ instance alignContentIsProps :: IsProp AlignContent where
   
 instance fontWeightIsProp :: IsProp FontWeight where
   toPropValue = propFromString <<< renderFontWeight
+
+instance overScrollModeIsProp :: IsProp OverScrollMode where
+  toPropValue = propFromString <<< renderOverScrollMode
+
+instance pageTransformerIsProp :: IsProp PageTransformer where
+  toPropValue = propFromString <<< renderPageTransformer
