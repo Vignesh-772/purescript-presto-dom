@@ -1,3 +1,10 @@
+## [2.7.3](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/compare/v2.7.2...v2.7.3) (2023-12-15)
+
+
+### Bug Fixes
+
+* PICAF-25333: Adding stroke for prestolist under bb migration ([7b32080](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/commit/7b32080ff13c27469d8200988555c7a5a6abf03b))
+
 ## [2.7.2](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/compare/v2.7.1...v2.7.2) (2023-12-05)
 
 
