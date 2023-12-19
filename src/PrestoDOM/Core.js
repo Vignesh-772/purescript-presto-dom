@@ -2449,6 +2449,14 @@ export const setScreenActive = function (ns) {
   }
 }
 
+export const setAllScreenInactive = function (ns,_screen) {
+  const screenActive = getScopedState(ns).screenActive;
+  const screens = Object.keys(screenActive);
+  screens.map((key) => {
+    screenActive[key] = false;
+  })
+}
+
 export const isScreenActive = function (ns) {
   return function (_screen) {
     return function () {

@@ -122,6 +122,7 @@ foreign import setVdomCache :: String -> String -> Effect Unit
 foreign import setScreenActive :: String -> String -> Effect Unit
 foreign import setScreenInActive :: String -> String -> Effect Unit
 foreign import isScreenActive :: String -> String -> Effect Boolean
+foreign import setAllScreenInactive :: EFn.EffectFn1 String Unit
 
 foreign import setUseHintColor :: Boolean -> Effect Unit
 
@@ -492,6 +493,7 @@ runScreen :: forall action state returnType
   -> Aff returnType
 runScreen st@{ name, parent, view} json = do
   ns <- liftEffect $ sanitiseNamespace parent
+  liftEffect $ Efn.runEffectFn1 setAllScreenInactive ns
   liftEffect $ setScreenActive ns name
   makeAff (\cb -> Efn.runEffectFn3 awaitPrerenderFinished ns name (cb $ Right unit) $> nonCanceler )
   liftEffect $ EFn.runEffectFn2 checkAndDeleteFromHideAndRemoveStacks ns name
@@ -552,6 +554,7 @@ showScreen :: forall action state returnType
   -> Aff returnType
 showScreen st@{name, parent, view} json = do
   ns <- liftEffect $ sanitiseNamespace parent
+  liftEffect $ Efn.runEffectFn1 setAllScreenInactive ns
   makeAff (\cb -> Efn.runEffectFn3 awaitPrerenderFinished ns name (cb $ Right unit) $> nonCanceler )
   liftEffect $ EFn.runEffectFn2 checkAndDeleteFromHideAndRemoveStacks ns name
   liftEffect $ Efn.runEffectFn1 makeCacheRootVisible ns
