@@ -1,3 +1,10 @@
+## [2.7.4](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/compare/v2.7.3...v2.7.4) (2023-12-19)
+
+
+### Bug Fixes
+
+* PICAF-23994: Made others screen active when new screen is called ([cebea84](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/commit/cebea841724fafabe8be852724fd7dfc49929a8c))
+
 ## [2.7.3](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/compare/v2.7.2...v2.7.3) (2023-12-15)
 
 
