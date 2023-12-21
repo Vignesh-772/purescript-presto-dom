@@ -2,6 +2,7 @@ module PrestoDOM.Core
   where
 
 import Prelude
+
 import Control.Alt ((<|>))
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..), either, hush)
@@ -11,8 +12,8 @@ import Data.Newtype (un)
 import Data.Traversable (traverse)
 import Data.Tuple (Tuple(..))
 import Effect (Effect)
-import Effect.Class (liftEffect)
 import Effect.Aff (Canceler, effectCanceler, Aff, makeAff, forkAff, joinFiber, launchAff_, nonCanceler)
+import Effect.Class (liftEffect)
 import Effect.Exception (Error)
 import Effect.Ref as Ref
 import Effect.Uncurried as EFn
@@ -23,29 +24,28 @@ import FRP.Event as E
 import Foreign (Foreign, isUndefined, unsafeToForeign)
 import Foreign.Generic (encode, decode, class Decode)
 import Foreign.NullOrUndefined (undefined)
-import Foreign.Object (Object, update, insert, delete, isEmpty, lookup, empty)
+import Foreign.Object (Object, delete, insert, isEmpty, lookup, update)
 import Halogen.VDom (Step, VDom, VDomSpec(..), buildVDom, extract, step)
 import Halogen.VDom.DOM.Prop (buildProp)
 import Halogen.VDom.Thunk (Thunk, buildThunk)
 import Halogen.VDom.Types (FnObject)
 import Presto.Core.Flow (Flow, doAff)
-import PrestoDOM.Events (manualEventsName)
-import PrestoDOM.Types.Core (class Loggable, PrestoWidget(..), Prop, ScopedScreen, Controller, ScreenBase, PrestoDOM)
 import Presto.Core.Types.Language.Flow (setLogField)
-import PrestoDOM.Utils (continue, logAction, addTime2, performanceMeasure, isGenerateVdom)
+import PrestoDOM.Core.Types (InsertState, UpdateActions, VdomTree)
+import PrestoDOM.Core.Utils (callMicroAppsForListState, extractAndDecode, extractJsonAndDecode, forkoutListState, generateCommands, getListData, replayListFragmentCallbacksImpl, verifyFont, verifyImage, attachUrlImages, isListContainer)
+import PrestoDOM.Events (manualEventsName)
 import PrestoDOM.Generate (generateMyDom)
+import PrestoDOM.Types.Core (class Loggable, PrestoWidget(..), Prop, ScopedScreen, Controller, ScreenBase, PrestoDOM)
+import PrestoDOM.Utils (continue, logAction, addTime2, performanceMeasure, isGenerateVdom)
 import Tracker (trackScreen, trackLifeCycle, trackAction)
 import Tracker.Labels as L
 import Tracker.Types (Level(..), Screen(..), Lifecycle(..), Action(System)) as T
 import Unsafe.Coerce (unsafeCoerce)
 
-import PrestoDOM.Core.Types (InsertState, UpdateActions, VdomTree)
-import PrestoDOM.Core.Utils (callMicroAppsForListState, extractAndDecode, extractJsonAndDecode, forkoutListState, generateCommands, getListData, replayListFragmentCallbacksImpl, verifyFont, verifyImage, attachUrlImages, isListContainer)
-
 foreign import setUpBaseState :: String -> Foreign -> Effect Unit
 foreign import insertDom :: forall a. EFn.EffectFn4 String String a Boolean InsertState
 foreign import addTime3 :: String -> Effect Unit
-foreign import addViewToParent :: EFn.EffectFn1 InsertState Unit
+foreign import addViewToParent :: EFn.EffectFn2 InsertState (Object Foreign) Unit
 foreign import postAccess :: Efn.EffectFn3 String String Boolean Unit
 foreign import isSSRVdomPresent :: String -> Boolean ->Effect Boolean
 foreign import parseProps :: EFn.EffectFn6 Foreign String Foreign String Foreign Boolean {ids :: Foreign, dom :: Foreign, elemId :: Foreign}
@@ -107,12 +107,12 @@ foreign import cacheMachine :: forall a b . EFn.EffectFn3 (Step a b) String Stri
 foreign import prepareDom :: forall a. EFn.EffectFn3 a String String Foreign
 foreign import getCachedMachineImpl :: forall a b . EFn.EffectFn4 ((Step a b) -> Maybe (Step a b)) (Maybe (Step a b)) String String (Maybe (Step a b))
 foreign import prepareAndStoreView :: EFn.EffectFn5 (Effect Unit) Foreign String String String Unit
-foreign import attachScreen :: EFn.EffectFn3 String String Foreign Unit
+foreign import attachScreen :: EFn.EffectFn4 String String Foreign (Object Foreign) Unit
 foreign import render :: EFn.EffectFn1 String Unit
 foreign import startedToPrepare :: EFn.EffectFn2 String String Unit
-foreign import awaitPrerenderFinished :: EFn.EffectFn3 String String (Effect Unit) Unit
+foreign import awaitPrerenderFinished :: EFn.EffectFn4 String String (Effect Unit) (Object Foreign) Unit
 
-foreign import addScreenWithAnim :: EFn.EffectFn3 Foreign String String Unit
+foreign import addScreenWithAnim :: EFn.EffectFn4 Foreign String String (Object Foreign) Unit
 foreign import awaitRootReady :: String -> (Unit -> Effect Unit) -> Effect Unit
 
 foreign import getTimeInMillis :: Effect Number
@@ -132,13 +132,13 @@ foreign import isOldNewStateSame :: Effect Boolean
 foreign import setGenerator :: Boolean -> Effect Unit
 foreign import getNamespace :: EFn.EffectFn1 String String
 
-updateChildren :: forall a. String -> String -> EFn.EffectFn1 a Unit
-updateChildren namespace screenName = do
+updateChildren :: forall a. String -> String -> Object Foreign ->EFn.EffectFn1 a Unit
+updateChildren namespace screenName json = do
   Efn.mkEffectFn1
     $ \rawActions -> do
           rawActions # unsafeCoerce
             # decode # runExcept # hush
-            <#> updateChildrenImpl namespace screenName <#> launchAffWithCounter namespace screenName
+            <#> updateChildrenImpl namespace screenName json <#> launchAffWithCounter namespace screenName
             # fromMaybe (pure unit)
 
 launchAffWithCounter :: forall a. String -> String -> Aff a -> Effect Unit
@@ -148,8 +148,8 @@ launchAffWithCounter namespace screenName aff = do
     _ <- aff
     liftEffect $ decrementPatchCounter namespace screenName
 
-updateChildrenImpl :: String -> String -> Array UpdateActions -> Aff (Array Unit)
-updateChildrenImpl namespace screenName = do
+updateChildrenImpl :: String -> String -> Object Foreign -> Array UpdateActions -> Aff (Array Unit)
+updateChildrenImpl namespace screenName json = do
   traverse
     \{action, parent, elem, index} -> do
         isAndroid' <- liftEffect $ isAndroid
@@ -160,7 +160,7 @@ updateChildrenImpl namespace screenName = do
             "add" -> do
                 insertState <- liftEffect $ Efn.runEffectFn3 (addChildImpl namespace screenName) (encode elem) (encode parent) index
                 domAllOut <- domAll {name : screenName, parent : Just namespace} (unsafeToForeign {}) undefined insertState.dom
-                liftEffect $ EFn.runEffectFn1 addViewToParent (insertState {dom = domAllOut})
+                liftEffect $ EFn.runEffectFn2 addViewToParent (insertState {dom = domAllOut}) json
             "move" ->
               liftEffect
                 if isAndroid'
@@ -278,8 +278,9 @@ patchBlock screenName namespace myDom = do
 spec
   :: String
   -> String
+  -> Object Foreign
   -> VDomSpec (Array (Prop (Effect Unit))) (Thunk PrestoWidget (Effect Unit))
-spec namespace screen =
+spec namespace screen json =
   VDomSpec
     { buildWidget : buildThunk (un PrestoWidget)
     , buildAttributes: buildProp identity
@@ -289,7 +290,7 @@ spec namespace screen =
   fun :: FnObject
   fun = { replaceView : replaceView namespace screen
         , setManualEvents : setManualEvents namespace screen
-        , updateChildren : updateChildren namespace screen
+        , updateChildren : updateChildren namespace screen json
         {--
         Compresss into a update children interface
         , moveChild : moveChild namespace
@@ -320,28 +321,29 @@ renderOrPatch :: forall action state returnType
   => EventIO action
   -> ScopedScreen action state returnType
   -> Boolean -> Boolean
+  -> (Object Foreign)
   -> Maybe (PrestoDOM (Effect Unit) (Thunk PrestoWidget (Effect Unit))) -> Aff Unit
-renderOrPatch {event, push} st@{ initialState, view, name , parent } true isCache maybeMyDom = do
-  _ <-  liftEffect $ trackAction T.System T.Debug L.STATUS "framework" (unsafeToForeign {function : "renderOrPatch"}) empty
+renderOrPatch {event, push} st@{ initialState, view, name , parent } true isCache json maybeMyDom = do
+  _ <-  liftEffect $ trackAction T.System T.Debug L.STATUS "framework" (unsafeToForeign {function : "renderOrPatch"}) json
   let myDom = fromMaybe' (\_ -> (view push initialState)) maybeMyDom
   let vdomMode = isJust maybeMyDom
   ns <- liftEffect $ sanitiseNamespace parent
   prMachine <- if isCache then pure Nothing else getCachedMachine ns name
   case prMachine of
     Just machine -> liftEffect do
-      EFn.runEffectFn3 attachScreen ns name (extract machine)
+      EFn.runEffectFn4 attachScreen ns name (extract machine) json
       newMachine <- EFn.runEffectFn2 step machine myDom
       EFn.runEffectFn3 storeMachine newMachine name ns
-      EFn.runEffectFn3 addScreenWithAnim (extract newMachine) name ns
+      EFn.runEffectFn4 addScreenWithAnim (extract newMachine) name ns json
       setPatchToActive ns name
       EFn.runEffectFn1 attachUrlImages (ns <> name)
     Nothing -> do
-      _ <-  liftEffect $ trackAction T.System T.Debug L.STATUS "framework" (unsafeToForeign {function : "renderOrPatch", flow : "cached machine not found"}) empty
-      machine <- liftEffect $ EFn.runEffectFn1 (buildVDom (spec ns name)) myDom
+      _ <-  liftEffect $ trackAction T.System T.Debug L.STATUS "framework" (unsafeToForeign {function : "renderOrPatch", flow : "cached machine not found"}) json
+      machine <- liftEffect $ EFn.runEffectFn1 (buildVDom (spec ns name json)) myDom
       liftEffect $ EFn.runEffectFn3 storeMachine machine name ns
       insertState <- liftEffect $ EFn.runEffectFn4 insertDom ns name (extract machine) isCache
       if(vdomMode)
-        then renderOrPatch {event, push} st false isCache maybeMyDom
+        then renderOrPatch {event, push} st false isCache json maybeMyDom
         else do
           -- DO NOT CHANGE THIS TO ENCODE,
           -- THE JSON IN THIS BLOCK IS MODIFIED IN JS
@@ -352,10 +354,10 @@ renderOrPatch {event, push} st@{ initialState, view, name , parent } true isCach
           _ <- liftEffect $ performanceMeasure "Render_domAll" "Render_domAll_Start" "Render_domAll_End"
           _ <- liftEffect $ addTime2 "Render_addViewToParent_Start"
           makeAff \cb -> awaitRootReady ns (cb <<< Right) $> nonCanceler
-          liftEffect $ EFn.runEffectFn1 addViewToParent (insertState {dom = domAllOut})
+          liftEffect $ EFn.runEffectFn2 addViewToParent (insertState {dom = domAllOut}) json
           _ <- liftEffect $ performanceMeasure "Render_addViewToParent" "Render_addViewToParent_Start" "Render_addViewToParent_End"
           liftEffect $ addTime2 "AfterRender_Start"
-renderOrPatch {push} { initialState, view, name, parent } false isCache maybeMyDom = liftEffect do
+renderOrPatch {push} { initialState, view, name, parent } false isCache _ maybeMyDom = liftEffect do
   let vdomMode = isJust maybeMyDom
   patchAndRun name parent (view push) initialState
   ns <- sanitiseNamespace parent
@@ -467,15 +469,15 @@ initUIWithNameSpace namespace id = do
 
 initUIWithScreen ::
   forall action state returnType.
-  String -> Maybe String -> ScopedScreen action state returnType -> Aff Unit
-initUIWithScreen namespace id screen = do
+  String -> Maybe String -> ScopedScreen action state returnType -> Object Foreign -> Aff Unit
+initUIWithScreen namespace id screen json = do
   liftEffect $ initUIWithNameSpace namespace id
   let myDom = screen.view (\_ -> pure unit) screen.initialState
   ns <- liftEffect $ sanitiseNamespace screen.parent
-  machine <- liftEffect $ EFn.runEffectFn1 (buildVDom (spec ns screen.name)) myDom
+  machine <- liftEffect $ EFn.runEffectFn1 (buildVDom (spec ns screen.name json)) myDom
   insertState <- liftEffect $ EFn.runEffectFn4 insertDom ns screen.name (extract machine) false
   domAllOut <- domAll screen (unsafeToForeign {}) undefined insertState.dom
-  liftEffect $ EFn.runEffectFn1 addViewToParent (insertState {dom = domAllOut})
+  liftEffect $ EFn.runEffectFn2 addViewToParent (insertState {dom = domAllOut}) json
 
 -- runScreen
 -- check if namespace exists
@@ -495,7 +497,7 @@ runScreen st@{ name, parent, view} json = do
   ns <- liftEffect $ sanitiseNamespace parent
   liftEffect $ Efn.runEffectFn1 setAllScreenInactive ns
   liftEffect $ setScreenActive ns name
-  makeAff (\cb -> Efn.runEffectFn3 awaitPrerenderFinished ns name (cb $ Right unit) $> nonCanceler )
+  makeAff (\cb -> Efn.runEffectFn4 awaitPrerenderFinished ns name (cb $ Right unit) (json) $> nonCanceler )
   liftEffect $ EFn.runEffectFn2 checkAndDeleteFromHideAndRemoveStacks ns name
   check <- liftEffect $  EFn.runEffectFn2 isInStack name ns <#> not
   eventIO <- liftEffect $ getEventIO name parent
@@ -510,7 +512,7 @@ runScreen st@{ name, parent, view} json = do
         liftEffect generateMyDom <#> Just
       else
         pure Nothing) >>=
-      renderOrPatch eventIO st check false
+      renderOrPatch eventIO st check false json
   _ <- liftEffect $ performanceMeasure "Render_renderOrPatch" "Render_renderOrPatch_Start" "Render_renderOrPatch_End"
   _ <- liftEffect $ performanceMeasure "Render_runScreen" "Render_runScreen_Start" "Render_runScreen_End"
   makeAff $ controllerActions eventIO st json (patchAndRun name parent (view eventIO.push))
@@ -555,7 +557,7 @@ showScreen :: forall action state returnType
 showScreen st@{name, parent, view} json = do
   ns <- liftEffect $ sanitiseNamespace parent
   liftEffect $ Efn.runEffectFn1 setAllScreenInactive ns
-  makeAff (\cb -> Efn.runEffectFn3 awaitPrerenderFinished ns name (cb $ Right unit) $> nonCanceler )
+  makeAff (\cb -> Efn.runEffectFn4 awaitPrerenderFinished ns name (cb $ Right unit) json $> nonCanceler )
   liftEffect $ EFn.runEffectFn2 checkAndDeleteFromHideAndRemoveStacks ns name
   liftEffect $ Efn.runEffectFn1 makeCacheRootVisible ns
   check <- liftEffect $  EFn.runEffectFn2 isCached name ns <#> not
@@ -563,7 +565,7 @@ showScreen st@{name, parent, view} json = do
   _ <- liftEffect $ trackScreen T.Screen T.Info L.CURRENT_SCREEN "overlay" name json
   _ <- liftEffect $ trackScreen T.Screen T.Info L.UPCOMING_SCREEN "overlay" name json
   liftEffect $ EFn.runEffectFn2 addToCachedList ns name
-  renderOrPatch eventIO st check true Nothing
+  renderOrPatch eventIO st check true json Nothing
   makeAff $ controllerActions eventIO st json (patchAndRun name parent (view eventIO.push))
 
 updateScreen :: forall action state returnType
@@ -592,7 +594,7 @@ prepareScreen screen@{name, parent, view} json = do
       pre_rendering_started <- liftEffect getTimeInMillis
       liftEffect $ trackScreen T.Screen T.Info L.PRERENDERED_SCREEN "pre_rendering_started" screen.name json
       let myDom = view (\_ -> pure unit) screen.initialState
-      machine <- liftEffect $ EFn.runEffectFn1 (buildVDom (spec ns name)) myDom
+      machine <- liftEffect $ EFn.runEffectFn1 (buildVDom (spec ns name json)) myDom
 
       liftEffect $ EFn.runEffectFn3 cacheMachine machine name ns
 

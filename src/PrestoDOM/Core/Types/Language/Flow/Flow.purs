@@ -25,8 +25,9 @@ initUIWithScreen
   :: forall action state a
    . Screen action state Unit
   -> Flow a Unit
-initUIWithScreen screen =
-  doAff do PrestoDOM.initUIWithScreen "default" Nothing (mapToScopedScreen screen)
+initUIWithScreen screen = do
+  json <- getLogFields
+  doAff do PrestoDOM.initUIWithScreen "default" Nothing (mapToScopedScreen screen) json
 
 runScreen :: forall action state retType a. Show action => Loggable action => Screen action state retType -> Flow a retType
 runScreen screen = do

@@ -157,6 +157,9 @@ const getTracker = function () {
   if (typeof trackerJson._trackAction != "function") {
     trackerJson._trackAction = loopedFunction;
   }
+  if (typeof trackerJson.__trackAction != "function") {
+    trackerJson.__trackAction = loopedFunction;
+  }
   if (typeof trackerJson._trackException != "function") {
     trackerJson._trackException = loopedFunction;
   }
@@ -1254,14 +1257,14 @@ export const insertDom = function(namespace, _name, dom, cache) {
   }
 }
 
-export const addViewToParent = function (insertObject) {
+export const addViewToParent = function (insertObject, json) {
   var dom = insertObject.dom
   // Storing the vdom, inside window.parent.serverSideKeys.vdom
   if (window.parent.generateVdom) {
     window.parent.serverSideKeys = window.parent.serverSideKeys || {};
     window.parent.serverSideKeys.vdom = JSON.stringify(insertObject);
   }
-  tracker._trackAction("system")("debug")("status")({"function" : "addViewToParent"})();
+  tracker.__trackAction("system")("debug")("status")({"function" : "addViewToParent"})(json)();
   AndroidWrapper.addViewToParent(
     insertObject.rootId,
     window.__OS == "ANDROID" ? JSON.stringify(dom) : dom,
@@ -1301,12 +1304,12 @@ export const prepareAndStoreView = function (callback, dom, key, namespace, scre
   );
 }
 
-export const attachScreen = function(namespace, _name, dom){
+export const attachScreen = function(namespace, _name, dom, json){
   if(!namespace) {
     console.error("Call initUI for namespace :: " + namespace + "before triggering run/show screen")
     return;
   }
-  tracker._trackAction("system")("debug")("status")({"function" : "attachScreen"})();
+  tracker.__trackAction("system")("debug")("status")({"function" : "attachScreen"})(json)();
   if (window.__OS == "ANDROID") {
     var rootId = getScopedState(namespace).stackRoot;
     var len = getScopedState(namespace).screenStack.length;
@@ -2308,8 +2311,8 @@ export const getCachedMachineImpl = function(just,nothing,namespace,screenName) 
  * @param {String} screenName - to start animation
  * @return {void}
  */
-export const addScreenWithAnim = function (dom,  screenName, namespace){
-  tracker._trackAction("system")("debug")("status")({"function" : "addScreenWithAnim"})();
+export const addScreenWithAnim = function (dom,  screenName, namespace, json){
+  tracker.__trackAction("system")("debug")("status")({"function" : "addScreenWithAnim"})(json)();
   if (window.__OS == "ANDROID") {
   //   var namespace = getNamespace(namespace_);
     if(!state.isPreRenderEnabled) namespace = getNamespace(namespace)
@@ -2361,14 +2364,14 @@ export const startedToPrepare = function(namespace, screenName){
   }
 }
 
-export const awaitPrerenderFinished = function(namespace, screenName, cb){
-  tracker._trackAction("system")("debug")("status")({"function" : "awaitPrerenderFinished"})();
+export const awaitPrerenderFinished = function(namespace, screenName, cb, json){
+  tracker.__trackAction("system")("debug")("status")({"function" : "awaitPrerenderFinished"})(json)();
   if(getConstState(namespace) && getConstState(namespace)[screenName] && getConstState(namespace)[screenName].prepareStarted){
     getConstState(namespace)[screenName].prepareStartedQueue = getConstState(namespace)[screenName].prepareStartedQueue || [];
     getConstState(namespace)[screenName].prepareStartedQueue.push(cb);
-    tracker._trackAction("system")("debug")("status")({"function" : "awaitPrerenderFinished", "flow" : "waiting for prerender to complete"})();
+    tracker.__trackAction("system")("debug")("status")({"function" : "awaitPrerenderFinished", "flow" : "waiting for prerender to complete"})(json)();
   }else{
-    tracker._trackAction("system")("debug")("status")({"function" : "awaitPrerenderFinished", "flow" : "prerender completed"})();
+    tracker.__trackAction("system")("debug")("status")({"function" : "awaitPrerenderFinished", "flow" : "prerender completed"})(json)();
     cb();
   }
 }
