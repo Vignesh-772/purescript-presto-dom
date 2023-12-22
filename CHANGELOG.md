@@ -1,3 +1,10 @@
+## [2.7.5](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/compare/v2.7.4...v2.7.5) (2023-12-22)
+
+
+### Bug Fixes
+
+* PICAF-25108: Adding rootFields json to status label logs ([6674c1a](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/commit/6674c1a9f982c8b9063b97a49b98cedba97ca4d8))
+
 ## [2.7.4](https://ssh.bitbucket.juspay.net/picaf/purescript-presto-dom/compare/v2.7.3...v2.7.4) (2023-12-19)
 
 
