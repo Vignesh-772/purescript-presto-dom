@@ -36,7 +36,7 @@ import PrestoDOM.Core.Utils (callMicroAppsForListState, extractAndDecode, extrac
 import PrestoDOM.Events (manualEventsName)
 import PrestoDOM.Generate (generateMyDom)
 import PrestoDOM.Types.Core (class Loggable, PrestoWidget(..), Prop, ScopedScreen, Controller, ScreenBase, PrestoDOM)
-import PrestoDOM.Utils (continue, logAction, addTime2, performanceMeasure, isGenerateVdom)
+import PrestoDOM.Utils (continue, logAction, addTime2, performanceMeasure, isGenerateVdom, initMeasuringDuration, endMeasuringDuration)
 import Tracker (trackScreen, trackLifeCycle, trackAction)
 import Tracker.Labels as L
 import Tracker.Types (Level(..), Screen(..), Lifecycle(..), Action(System)) as T
@@ -349,13 +349,16 @@ renderOrPatch {event, push} st@{ initialState, view, name , parent } true isCach
           -- THE JSON IN THIS BLOCK IS MODIFIED IN JS
           -- AND CAN IMPACT ALL ENCODE USAGES
           _ <- liftEffect $ addTime2 "Render_domAll_Start"
+          _ <- liftEffect $ initMeasuringDuration $ "screens." <> name <> ".domRenderDuration"
           domAllOut <- domAll st (unsafeToForeign {}) undefined insertState.dom
+          _ <- liftEffect $ endMeasuringDuration $ "screens." <> name <> ".domRenderDuration"
           _ <- liftEffect $ addTime2 "Render_domAll_End"
           _ <- liftEffect $ performanceMeasure "Render_domAll" "Render_domAll_Start" "Render_domAll_End"
           _ <- liftEffect $ addTime2 "Render_addViewToParent_Start"
           makeAff \cb -> awaitRootReady ns (cb <<< Right) $> nonCanceler
           liftEffect $ EFn.runEffectFn2 addViewToParent (insertState {dom = domAllOut}) json
           _ <- liftEffect $ performanceMeasure "Render_addViewToParent" "Render_addViewToParent_Start" "Render_addViewToParent_End"
+          _ <- liftEffect $ endMeasuringDuration $ "screens." <> name <> ".screenRenderDuration"
           liftEffect $ addTime2 "AfterRender_Start"
 renderOrPatch {push} { initialState, view, name, parent } false isCache _ maybeMyDom = liftEffect do
   let vdomMode = isJust maybeMyDom
@@ -494,6 +497,7 @@ runScreen :: forall action state returnType
   -> (Object Foreign)
   -> Aff returnType
 runScreen st@{ name, parent, view} json = do
+  _ <- liftEffect $ initMeasuringDuration $ "screens." <> name <> ".screenRenderDuration"
   ns <- liftEffect $ sanitiseNamespace parent
   liftEffect $ Efn.runEffectFn1 setAllScreenInactive ns
   liftEffect $ setScreenActive ns name
@@ -514,7 +518,7 @@ runScreen st@{ name, parent, view} json = do
         pure Nothing) >>=
       renderOrPatch eventIO st check false json
   _ <- liftEffect $ performanceMeasure "Render_renderOrPatch" "Render_renderOrPatch_Start" "Render_renderOrPatch_End"
-  _ <- liftEffect $ performanceMeasure "Render_runScreen" "Render_runScreen_Start" "Render_runScreen_End"
+  _ <- liftEffect $ performanceMeasure "Render_runScreen" "Render_runScreen_Start" "Render_runScreen_End"  
   makeAff $ controllerActions eventIO st json (patchAndRun name parent (view eventIO.push))
 
 createPushQueue :: forall action. String -> String -> (action -> Effect Unit) -> String -> action -> Effect Unit
