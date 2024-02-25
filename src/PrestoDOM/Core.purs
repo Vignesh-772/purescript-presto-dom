@@ -1,8 +1,7 @@
 module PrestoDOM.Core
   where
 
-import Prelude
-
+import Prelude (class Show, Unit, bind, const, discard, flip, identity, not, pure, unit, when, (#), ($), ($>), (*>), (-), (<#>), (<$>), (<<<), (<>), (=<<), (>>=))
 import Control.Alt ((<|>))
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..), either, hush)
@@ -422,13 +421,13 @@ controllerActions {event, push} {initialState, eval, name, globalEvents, parent}
   EFn.runEffectFn3 saveCanceller name ns $ joinCancellers cancellers canceller
   pure $ effectCanceler (EFn.runEffectFn2 cancelExistingActions name ns)
     where
-      onStateChange previousAction currentAction timerRef (Tuple state cmds) = do
-        stateSame <- isOldNewStateSame
-        if stateSame
-          then pure unit
-        else
-          emitter state
-        for_ cmds (\effAction -> effAction >>= push)
+      onStateChange previousAction currentAction timerRef eitherState = do
+        case eitherState of
+          Right (Tuple state cmds) -> do
+            emitter state
+            for_ cmds (\effAction -> effAction >>= push)
+          _ -> pure unit
+
         logAction timerRef previousAction currentAction false json -- debounce
       onExit previousAction currentAction timerRef (Tuple sc ret) = do
         ns <- sanitiseNamespace parent
@@ -453,12 +452,17 @@ controllerActions {event, push} {initialState, eval, name, globalEvents, parent}
         where
           calculateEitherState =
             case st.eitherState of
-              Right (Tuple state _) ->
-                let newEitherState = eval action state
-                in case newEitherState of
-                    Right (Tuple newstate cmds) -> Right (Tuple (compareState newstate state) cmds)
-                    Left _ -> newEitherState
+              Right eitherState ->
+                case eitherState of
+                  Right (Tuple state _) -> getEval $ eval action state
+                  Left state -> getEval $ eval action state
               _ -> st.eitherState
+          getEval newEitherState = case newEitherState of
+                      Right eState ->
+                        case eState of
+                          Right (Tuple newstate cmds) -> Right (Right (Tuple newstate cmds))
+                          _ -> newEitherState
+                      _ -> newEitherState
 
 
 -- initUIWithNameSpace
