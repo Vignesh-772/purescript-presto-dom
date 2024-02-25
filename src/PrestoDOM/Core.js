@@ -321,14 +321,17 @@ function removeViewFromNameSpace (namespace, id) {
   }
 }
 
-function hideViewInNameSpace (id, namespace) {
+function hideViewInNameSpace (id, namespace, extraProps, useGone) {
   // Return callback to hide screens
   return function () {
-    var __visibility = window.__OS == "IOS" ? "invisible" : "gone";
+    var __visibility = !useGone && window.__OS == "IOS" ? "invisible" : "gone";
     var prop = {
       id: id,
       visibility: __visibility
     };
+    Object.getOwnPropertyNames(extraProps).forEach(k => {
+      prop[k] = extraProps[k];
+    })
     if (window.__OS == "ANDROID") {
 
       var cmd = cmdForAndroid(prop, true, "relativeLayout");
@@ -689,7 +692,7 @@ function hideOldScreenNow(namespace, screenName) {
   }
   if (getScopedState(namespace).shouldHideCacheRoot){
     getScopedState(namespace).shouldHideCacheRoot = false
-    hideViewInNameSpace(getScopedState(namespace).cacheRoot, namespace)()
+    hideViewInNameSpace(getScopedState(namespace).cacheRoot, namespace, {})()
   }
   if(getScopedState(namespace).shouldReplayCallbacks[sn]) {
     getScopedState(namespace).shouldReplayCallbacks[sn] = false;
@@ -727,6 +730,29 @@ function cmdForAndroid(config, set, type) {
   obj.runInUI = cmd + obj.runInUI + ";";
   obj.id = id;
   return obj;
+}
+
+function checkAndUpdateAnimations(config, namespace, elem, callback) {
+  window.animate_on_gone_views = window.animate_on_gone_views || {};
+  if (Object.prototype.hasOwnProperty.call(window.animate_on_gone_views, elem.__ref.__id) && config.inlineAnimation) {
+    const existingOnAniamtionEnd = elem ? elem.props.onAnimationEnd : config.onAnimationEnd;
+    if (config.visibility && config.visibility == "gone") {
+      delete config.visibility;
+      config["onAnimationEnd"] = function () {
+        if (existingOnAniamtionEnd) existingOnAniamtionEnd();
+        if (callback) {
+          existingOnAniamtionEnd()
+          if (callback) callback(elem.__ref.__id, getIdFromNamespace(namespace));
+        } else {
+          hideViewInNameSpace(elem.__ref.__id, namespace, {
+            "onAnimationEnd": existingOnAniamtionEnd ? existingOnAniamtionEnd : function () {}
+          },true)();
+        }
+      }
+      return true;
+    }
+  }
+  return false;
 }
 
 export const callAnimation = callAnimation__
@@ -1243,7 +1269,7 @@ export const insertDom = function(namespace, _name, dom, cache) {
   var rootId = cache ? getScopedState(namespace).cacheRoot : getScopedState(namespace).stackRoot
   var len = cache ? getScopedState(namespace).screenCache.length : getScopedState(namespace).screenStack.length
   // TODO implement cache limit later
-  getConstState(namespace).screenHideCallbacks[_name] = hideViewInNameSpace(dom.__ref.__id, namespace)
+  getConstState(namespace).screenHideCallbacks[_name] = hideViewInNameSpace(dom.__ref.__id, namespace,{})
   getConstState(namespace).screenShowCallbacks[_name] = showViewInNameSpace(dom.__ref.__id, namespace)
   getConstState(namespace).screenRemoveCallbacks[_name] = removeViewFromNameSpace(namespace, dom.__ref.__id)
   var callback = callbackMapper.map(executePostProcess(_name, namespace, cache))
@@ -1597,7 +1623,7 @@ function applyProps(element, prop, set, namespace) {
   ) {
     delete prop.focus;
   }
-
+  checkAndUpdateAnimations(prop,namespace,element);
   if (window.__OS == "ANDROID") {
     var cmd = cmdForAndroid(prop, set, element.type);
     if (AndroidWrapper.updateProperties) {
@@ -1616,7 +1642,6 @@ function applyProps(element, prop, set, namespace) {
 export const replaceView = function (namespace) {
   return function(screenName){
     return function (element, _event, removedProps) {
-      // console.log("REPLACE VIEW", element.__ref.__id, element.props);
       if(window.parent.generateVdom){
         return
       }
@@ -1686,7 +1711,7 @@ export const moveChild = function(namespace) {
 
 export const removeChild = function(namespace) {
   return function(child, _parent, index) {
-    AndroidWrapper.removeView(child.__ref.__id,  getIdFromNamespace(namespace));
+    if (!checkAndUpdateAnimations(child.props,namespace,child, AndroidWrapper.removeView)) AndroidWrapper.removeView(child.__ref.__id,  getIdFromNamespace(namespace));
   }
 }
 export const updatePropertiesImpl = function (namespace) {
@@ -2278,7 +2303,7 @@ export function prepareDom (dom, _name, namespace){
   if(dom.props) {
     dom.props.root = true;
   }
-  getConstState(namespace).screenHideCallbacks[_name] = hideViewInNameSpace(dom.__ref.__id, namespace)
+  getConstState(namespace).screenHideCallbacks[_name] = hideViewInNameSpace(dom.__ref.__id, namespace,{})
   getConstState(namespace).screenShowCallbacks[_name] = showViewInNameSpace(dom.__ref.__id, namespace)
   getConstState(namespace).screenRemoveCallbacks[_name] = removeViewFromNameSpace(namespace, dom.__ref.__id)
   return dom;
