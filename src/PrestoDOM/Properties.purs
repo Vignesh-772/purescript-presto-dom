@@ -54,6 +54,7 @@ module PrestoDOM.Properties
   , ellipsize
   , enableRefresh
   , enableRoundedRipple
+  , enableAnimateOnGone
   , fillViewport
   , focus
   , focusOut
@@ -971,3 +972,6 @@ pageTransformer = prop (PropName "pageTransformer")
 
 qr :: forall i. Qr -> Prop i
 qr = prop (PropName "qr")
+
+enableAnimateOnGone :: forall i. Boolean -> Prop i
+enableAnimateOnGone = prop (PropName "enableAnimateOnGone")
