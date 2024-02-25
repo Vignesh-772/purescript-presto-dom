@@ -52,7 +52,7 @@ newtype PropName :: forall k. k -> Type
 newtype PropName value = PropName String
 type PrestoDOM i w = VDom (Array (Prop i)) w
 type Cmd action = Array (Effect action)
-type Eval action returnType state = Either (Tuple (Maybe (Tuple state (Cmd action))) returnType) (Tuple state (Cmd action))
+type Eval action returnType state = Either (Tuple (Maybe (Tuple state (Cmd action))) returnType) (Either state (Tuple state (Cmd action)) )
 
 type Props i = Array (Prop i)
 
