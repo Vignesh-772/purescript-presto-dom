@@ -106,16 +106,24 @@ export const isGenerateVdom = function () {
 
 export const initMeasuringDuration = function (key) {
   return function () {
+    try {
       window.events = window.events || {}
       if (!window.events[key])
         window.events[key] = new Date();
+    } catch (error) {
+      console.error("initMeasuringDuration", key, error)
+    }
   };
 };
 
 export const endMeasuringDuration = function (key) {
   return function () {
+    try {
       window.events = window.events || {}
-      if (window.events[key])
+      if (typeof window.events[key] === "object")
         window.events[key] = new Date().getTime() - window.events[key].getTime();
+    } catch (error) {
+      console.error("endMeasuringDuration", key, error)
+    }
   };
 };
