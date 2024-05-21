@@ -121,6 +121,7 @@ module PrestoDOM.Properties
   , popupMenu
   , position
   , progressColor
+  , progressBarColor
   , prop
   , removeClassList
   , rippleColor
@@ -654,6 +655,10 @@ bottomShift = prop (PropName "bottomShift")
 -- | String
 progressColor :: forall i. String -> Prop i
 progressColor = prop (PropName "progressColor")
+
+-- | String
+progressBarColor :: forall i. String -> Prop i
+progressBarColor = prop (PropName "progressBarColor")
 
 -- | String
 placeHolder :: forall i. String -> Prop i
