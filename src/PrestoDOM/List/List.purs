@@ -28,12 +28,14 @@ module PrestoDOM.List
   , clickableHolder
   , textFromHtmlHolder
   , preComputeListItem
- , renderImageSource
+  , renderImageSource
+  , renderQrHolder
   , preComputeListItemWithFragment
   , animationSetHolder
   , testIdHolder
   , strokeHolder
   , cornerRadiusHolder
+  , qrHolder
   ) where
 
 import Prelude
@@ -68,7 +70,7 @@ import PrestoDOM.Core (createPrestoElement)
 import PrestoDOM.Elements.Elements (element)
 import PrestoDOM.Events (makeEvent, emitComponentConfig)
 import PrestoDOM.Properties (prop)
-import PrestoDOM.Types.Core (toPropValue, PrestoDOM)
+import PrestoDOM.Types.Core (toPropValue, PrestoDOM, renderQr, Qr)
 import Type.Row.Homogeneous (class Homogeneous)
 import Unsafe.Coerce (unsafeCoerce)
 import Web.Event.Event (EventType(..)) as DOM
@@ -317,6 +319,9 @@ clickableHolder = prop (PropName "holder_clickable")
 textFromHtmlHolder :: forall i. String -> P.Prop i
 textFromHtmlHolder = prop (PropName "holder_textFromHtml")
 
+qrHolder :: forall i. String -> P.Prop i
+qrHolder = prop (PropName "holder_qr")
+
 renderImageSource :: ImageSource -> String
 renderImageSource imgSrc =
   case imgSrc of
@@ -324,6 +329,9 @@ renderImageSource imgSrc =
     ImagePath path           -> "path->" <> path
     ImageResId resId         -> "resId->" <> show resId
     ImageName name           -> name
+
+renderQrHolder :: Qr -> String
+renderQrHolder = renderQr
 
 
 data AnimationHolder = AnimationHolder (Array AnimProp) String

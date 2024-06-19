@@ -27,6 +27,7 @@ module PrestoDOM.Types.DomAttributes
   , AlignContent(..)
   , OverScrollMode (..)
   , PageTransformer(..)
+  , Qr(..)
   , __IS_ANDROID
   , active
   , alphaBuilder
@@ -71,6 +72,7 @@ module PrestoDOM.Types.DomAttributes
   , renderAlignContent
   , renderOverScrollMode
   , renderPageTransformer
+  , renderQr
   , repeatCount
   , repeatDelay
   , shape
@@ -1496,3 +1498,19 @@ decodePageTransformerUtil json =
 
 renderPageTransformer :: PageTransformer -> String
 renderPageTransformer = show
+
+data Qr = Qr String Int Int
+
+
+derive instance genericQr :: Generic Qr _
+instance encodeQr :: Encode Qr where encode = renderQr >>> unsafeToForeign
+instance showQr :: Show Qr where show = genericShow
+instance hyperdecodeQr :: HyperDecode Qr where
+    hyperDecode o success _ =
+      let safeString = toSafeString $ unsafeFromForeign o 
+      in success $ Qr safeString 0 0
+    partialDecode _ = hyperDecode
+instance decodeQr :: Decode Qr where decode o = hyperDecode o (except <<< Right) (except <<< Left <<< singleton <<< ForeignError)
+
+renderQr :: Qr -> String
+renderQr (Qr qrData size margin) = qrData <> "," <> (show size) <> "," <> (show margin)

@@ -189,6 +189,7 @@ module PrestoDOM.Properties
   , selectAllOnFocus
   , disableKeyboardAvoidance
   , enableShift
+  , qr
   )
   where
 
@@ -197,7 +198,7 @@ import Prelude
 import Data.String (toLower)
 import Halogen.VDom.DOM.Prop (Prop(..))
 import PrestoDOM.Types.Core (class IsProp, Gradient, Gravity, InputType, Length, Margin, Orientation, Padding, Position, PropName(..), Shadow, Typeface, Visibility, FlexDirection, JustifyContent, AlignContent, AlignItems, FlexWrap, toPropValue)
-import PrestoDOM.Types.DomAttributes (ImageUrl, BottomSheetState, Corners, Font(..), FontWeight, LetterSpacing, LineSpacing, Accessiblity, Shimmer, OverScrollMode, PageTransformer, __IS_ANDROID)
+import PrestoDOM.Types.DomAttributes (ImageUrl, BottomSheetState, Corners, Font(..), FontWeight, LetterSpacing, LineSpacing, Accessiblity, Shimmer, OverScrollMode, PageTransformer, Qr, __IS_ANDROID)
 
 
 prop :: forall value i. IsProp value => PropName value -> value -> Prop i
@@ -967,3 +968,6 @@ scrollDirection = prop (PropName "scrollDirection")
 
 pageTransformer :: forall i. PageTransformer -> Prop i
 pageTransformer = prop (PropName "pageTransformer")
+
+qr :: forall i. Qr -> Prop i
+qr = prop (PropName "qr")

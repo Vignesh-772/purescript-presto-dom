@@ -2064,10 +2064,12 @@ const isURL = function (str) {
 }
 
 export const getListDataCommands = function (listData, element) {
-  var x = ["background", "imageUrl", "visibility", "fontStyle", "textSize", "packageIcon", "alpha", "text", "color", "onClick", "onInspectClick", "cornerRadius"]
+  var x = ["background", "imageUrl", "visibility", "fontStyle", "textSize", "packageIcon", "alpha", "text", "color", "onClick", "onInspectClick", ]
   if(window.__OS == "IOS" ){
     x.push("testID");
     x.push("textFromHtml");
+  } else if (window.__OS != "WEB") {
+    x.push("cornerRadius")
   }
   var y = [];
   var keyPropMap = state.listViewKeys[element.__ref.__id]
@@ -2077,7 +2079,7 @@ export const getListDataCommands = function (listData, element) {
     let item = {};
     for(let id in keyPropMap) {
       var ps = {}
-      var backMap = {runInUI : "runInUI" + id}
+      var backMap = {runInUI : "runInUI" + id, methods :  "runInUI" + id}
       for(let prop in keyPropMap[id]) {
         if(x.indexOf(keyPropMap[id][prop]) != -1 || window.__OS == "WEB") {
           if(keyPropMap[id][prop] == "imageUrl" && window.__OS != "WEB") {
@@ -2134,6 +2136,9 @@ export const getListDataCommands = function (listData, element) {
       if(window.__OS == "ANDROID" || window.__OS == "IOS" ) {
         // TODO add cross platform support
         ps = parseParams("linearLayout", ps, "get")
+        if (ps.config) {
+          ps.methods = ps.config.methods;
+        }
       }
       ps.runInUI = (ps.runInUI || "")
       if(ps.runInUI == "")
