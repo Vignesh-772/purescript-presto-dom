@@ -4,6 +4,7 @@ module PrestoDOM.Animation
   , Interpolator(..)
   , RepeatMode(..)
   , RepeatCount(..)
+  , FillMode(..)
   , duration
   , delay
   , repeatMode
@@ -35,6 +36,7 @@ module PrestoDOM.Animation
   , fromAlpha
   , toAlpha
   , interpolator
+  , fillMode
   , tag
   , expandDirection
   , animationSet
@@ -99,6 +101,19 @@ data RepeatCount = NoRepeat | Repeat Int | Infinite
 
 -- | Interpolators supported by the animation API
 data Interpolator = EaseIn | EaseOut | EaseInOut | Linear | Bounce | Bezier Number Number Number Number
+
+-- | Fill Mode Added only in IOS 
+data FillMode = Forward | Backward | Both | Removed
+
+derive instance genericFillMode :: Generic FillMode _
+
+instance showFillMode :: Show FillMode where
+  show =
+    case _ of
+      Forward -> "forward"
+      Backward -> "backward"
+      Both -> "both"
+      Removed -> "removed"
 
 derive instance genericInterpolator :: Generic Interpolator _
 
@@ -211,6 +226,46 @@ encodeRepeatModeUtil =
     Restart -> "restart"
     Reverse -> "reverse"
 
+instance decodeFillMode :: Decode FillMode where decode = decodeFillModeUtil <<< toSafeString <<< unsafeFromForeign
+
+decodeFillModeUtil :: forall a. Applicative a => String -> ExceptT (NonEmptyList ForeignError) a FillMode
+decodeFillModeUtil json =
+  if isUndefined json then
+    (except <<< Left <<< singleton <<< ForeignError) "Repeat Mode is not defined"
+  else
+    except $
+      case toLower json of
+        "forward" -> Right Forward
+        "backward" -> Right Backward
+        "both" -> Right Both
+        "removed" -> Right Removed
+        _         -> (Left <<< singleton <<< ForeignError) $ "Repeat Mode is not supported"
+
+instance hyperDecodeFillMode :: HyperDecode FillMode where
+    hyperDecode obj success failure =
+        if isUndefined safeStr then
+            failure "Repeat Mode is not defined"
+          else
+              case toLower safeStr of
+                "forward" -> success Forward
+                "backward" -> success Backward
+                "both" -> success Both
+                "removed" -> success Removed
+                _         -> failure "Repeat Mode is not supported"
+        where
+        safeStr = toSafeString $ unsafeFromForeign obj
+    partialDecode _ = hyperDecode
+
+
+instance encodeFillMode :: Encode FillMode where encode = encodeFillModeUtil
+encodeFillModeUtil :: FillMode -> Foreign
+encodeFillModeUtil =
+  unsafeToForeign <<< case _ of
+    Forward -> "forward"
+    Backward -> "backward"
+    Both -> "both"
+    Removed -> "removed"
+
 -- | Repeat Count
 type RepeatCountType = {type :: String, value :: String}
 
@@ -302,6 +357,11 @@ startLottie = animProp "startLottie"
 -- | Default: NoRepeat
 repeatMode :: RepeatMode -> AnimProp
 repeatMode = animProp "repeatMode"
+
+-- | Fill mode of the animation
+-- | Default: Removed
+fillMode :: FillMode -> AnimProp
+fillMode = animProp "fillMode"
 
 -- | Repeat count of the animation
 -- | Default: 0

@@ -8,7 +8,7 @@ export const stringifyGradient = function (type, angle, values) {
 
 export const __IS_ANDROID = function () {
   return window.__OS == "ANDROID";
-};
+}();
 
 export const __IS_WEB = function () {
   return window.__OS == "WEB";
