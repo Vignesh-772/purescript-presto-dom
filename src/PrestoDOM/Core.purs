@@ -361,9 +361,9 @@ renderOrPatch {event, push} st@{ initialState, view, name , parent } true isCach
           liftEffect $ addTime2 "AfterRender_Start"
 renderOrPatch {push} { initialState, view, name, parent } false isCache _ maybeMyDom = liftEffect do
   let vdomMode = isJust maybeMyDom
-  patchAndRun name parent (view push) initialState
   ns <- sanitiseNamespace parent
   EFn.runEffectFn2 makeScreenVisible ns name
+  patchAndRun name parent (view push) initialState
   EFn.runEffectFn3 callAnimation name ns isCache
   -- Calling postAccess function to execute the exceutePostProcess and also add all onClickListeners
   when vdomMode $ liftEffect $ Efn.runEffectFn3 postAccess name ns true
