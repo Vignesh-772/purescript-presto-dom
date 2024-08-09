@@ -145,6 +145,7 @@ module PrestoDOM.Properties
   , separator
   , separatorRepeat
   , setDate
+  , setCursorAtEnd
   , setEnable
   , shadow
   , autoFillHint
@@ -746,6 +747,9 @@ shadow = prop (PropName "shadow")
 
 autoFillHint :: forall i. String -> Prop i
 autoFillHint = prop (PropName "autoFillHint")
+
+setCursorAtEnd :: forall i. Boolean -> Prop i
+setCursorAtEnd = prop (PropName "setCursorAtEnd")
 
 -- | Int
 showDividers :: forall i. Int -> Prop i
