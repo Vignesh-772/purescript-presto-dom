@@ -36,6 +36,7 @@ module PrestoDOM.List
   , strokeHolder
   , cornerRadiusHolder
   , qrHolder
+  , accessibilityHintHolder
   ) where
 
 import Prelude
@@ -321,6 +322,9 @@ textFromHtmlHolder = prop (PropName "holder_textFromHtml")
 
 qrHolder :: forall i. String -> P.Prop i
 qrHolder = prop (PropName "holder_qr")
+
+accessibilityHintHolder :: forall i. String -> P.Prop i
+accessibilityHintHolder = prop (PropName "holder_accessibilityHint")
 
 renderImageSource :: ImageSource -> String
 renderImageSource imgSrc =
