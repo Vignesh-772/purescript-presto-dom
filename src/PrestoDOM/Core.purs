@@ -1,7 +1,6 @@
 module PrestoDOM.Core
   where
-
-import Prelude (class Show, Unit, bind, const, discard, flip, identity, not, pure, unit, when, (#), ($), ($>), (*>), (-), (<#>), (<$>), (<<<), (<>), (=<<), (>>=))
+import Prelude (class Show, Unit, bind, const, discard, flip, identity, not, pure, unit, when, (#), ($), ($>), (*>), (-), (<#>), (<$>), (<<<), (<>), (=<<), (>>=), (/=), show)
 import Control.Alt ((<|>))
 import Control.Monad.Except (runExcept)
 import Data.Either (Either(..), either, hush)
@@ -34,12 +33,13 @@ import PrestoDOM.Core.Types (InsertState, UpdateActions, VdomTree)
 import PrestoDOM.Core.Utils (callMicroAppsForListState, extractAndDecode, extractJsonAndDecode, forkoutListState, generateCommands, getListData, replayListFragmentCallbacksImpl, verifyFont, verifyImage, attachUrlImages, isListContainer)
 import PrestoDOM.Events (manualEventsName)
 import PrestoDOM.Generate (generateMyDom)
-import PrestoDOM.Types.Core (class Loggable, PrestoWidget(..), Prop, ScopedScreen, Controller, ScreenBase, PrestoDOM)
+import PrestoDOM.Types.Core (class Loggable, PrestoWidget(..), Prop, ScopedScreen, Controller, ScreenBase, PrestoDOM, LoggableScreen)
 import PrestoDOM.Utils (continue, logAction, addTime2, performanceMeasure, isGenerateVdom, initMeasuringDuration, endMeasuringDuration)
 import Tracker (trackScreen, trackLifeCycle, trackAction)
 import Tracker.Labels as L
 import Tracker.Types (Level(..), Screen(..), Lifecycle(..), Action(System)) as T
 import Unsafe.Coerce (unsafeCoerce)
+import Debug
 
 foreign import setUpBaseState :: String -> Foreign -> Effect Unit
 foreign import insertDom :: forall a. EFn.EffectFn4 String String a Boolean InsertState
@@ -130,6 +130,9 @@ foreign import isOldNewStateSame :: Effect Boolean
 
 foreign import setGenerator :: Boolean -> Effect Unit
 foreign import getNamespace :: EFn.EffectFn1 String String
+
+foreign import pushState :: forall a. a -> String -> String -> Unit
+foreign import setLogWhitelist :: String -> Array String -> Effect Unit
 
 updateChildren :: forall a. String -> String -> Object Foreign ->EFn.EffectFn1 a Unit
 updateChildren namespace screenName json = do
@@ -318,7 +321,7 @@ getEventIO screenName parent = do
 renderOrPatch :: forall action state returnType
   . Show action => Loggable action
   => EventIO action
-  -> ScopedScreen action state returnType
+  -> LoggableScreen action state returnType
   -> Boolean -> Boolean
   -> (Object Foreign)
   -> Maybe (PrestoDOM (Effect Unit) (Thunk PrestoWidget (Effect Unit))) -> Aff Unit
@@ -401,19 +404,25 @@ domAll' rootId {name, parent} ids parentType dom = {--dom--} do
 domAll :: forall a.  {name :: String, parent :: Maybe String | a} -> Foreign -> Foreign -> Foreign -> Aff Foreign
 domAll = domAll' undefined
 
+-- check if whitelist of keys is empty
+isLogWhiteList :: Array String -> Boolean
+isLogWhiteList logWhitelist = logWhitelist /= []
+
 controllerActions :: forall action state returnType a
   . Show action => Loggable action
   => EventIO action
-  -> ScreenBase action state returnType (parent :: Maybe String| a)
+  -> ScreenBase action state returnType (parent :: Maybe String, logWhitelist :: Array String | a)
   -> (Object Foreign)
   -> (state -> Effect Unit)
   -> (Either Error returnType -> Effect Unit)
   -> Effect Canceler
-controllerActions {event, push} {initialState, eval, name, globalEvents, parent} json emitter cb = do
+controllerActions {event, push} {initialState, eval, name, globalEvents, parent, logWhitelist} json emitter cb = do
   ns <- sanitiseNamespace parent
   _ <- EFn.runEffectFn2 cancelExistingActions name ns
+  _ <- setLogWhitelist ns logWhitelist -- set key whitelist to be logged for the screen 
+  _ <- pure $ if isLogWhiteList logWhitelist then pushState initialState ns "InitialState" else unit
   timerRef <- Ref.new 0
-  let stateBeh = unfold execEval event { previousAction : Nothing, currentAction : Nothing, eitherState : (continue initialState)}
+  let stateBeh = unfold (execEval ns) event { previousAction : Nothing, currentAction : Nothing, eitherState : (continue initialState)}
   canceller <- sample_ stateBeh event `subscribe` (\a -> either (onExit a.previousAction a.currentAction timerRef) (onStateChange a.previousAction a.currentAction timerRef) a.eitherState)
   activityId <- getCurrentActivity
   _ <- setScreenPushActive ns name activityId
@@ -444,7 +453,7 @@ controllerActions {event, push} {initialState, eval, name, globalEvents, parent}
         cb $ Right ret
       registerEvents =
         (\f -> f push)
-      execEval action st =
+      execEval ns action st =
         { previousAction : st.currentAction
         , currentAction : Just action
         , eitherState : calculateEitherState
@@ -460,9 +469,18 @@ controllerActions {event, push} {initialState, eval, name, globalEvents, parent}
           getEval newEitherState = case newEitherState of
                       Right eState ->
                         case eState of
-                          Right (Tuple newstate cmds) -> Right (Right (Tuple newstate cmds))
-                          _ -> newEitherState
-                      _ -> newEitherState
+                          Right (Tuple newstate cmds) ->
+                              let 
+                                _ = if isLogWhiteList logWhitelist then pushState newstate ns (show action) else unit
+                              in Right (Right (Tuple newstate cmds))
+                          Left state -> 
+                              let 
+                                _ = if isLogWhiteList logWhitelist then pushState state ns (show action) else unit
+                              in newEitherState
+                      Left state -> 
+                        let 
+                          _ = if isLogWhiteList logWhitelist then pushState state ns (show action) else unit
+                        in newEitherState
 
 
 -- initUIWithNameSpace
@@ -476,7 +494,7 @@ initUIWithNameSpace namespace id = do
 
 initUIWithScreen ::
   forall action state returnType.
-  String -> Maybe String -> ScopedScreen action state returnType -> Object Foreign -> Aff Unit
+  String -> Maybe String -> LoggableScreen action state returnType -> Object Foreign -> Aff Unit
 initUIWithScreen namespace id screen json = do
   liftEffect $ initUIWithNameSpace namespace id
   let myDom = screen.view (\_ -> pure unit) screen.initialState
@@ -497,7 +515,7 @@ initUIWithScreen namespace id screen json = do
 -- no  -> add screen on top of stack
 runScreen :: forall action state returnType
   . Show action => Loggable action
-  => ScopedScreen action state returnType
+  => LoggableScreen action state returnType
   -> (Object Foreign)
   -> Aff returnType
 runScreen st@{ name, parent, view} json = do
@@ -507,6 +525,7 @@ runScreen st@{ name, parent, view} json = do
   liftEffect $ setScreenActive ns name
   makeAff (\cb -> Efn.runEffectFn4 awaitPrerenderFinished ns name (cb $ Right unit) (json) $> nonCanceler )
   liftEffect $ EFn.runEffectFn2 checkAndDeleteFromHideAndRemoveStacks ns name
+  
   check <- liftEffect $  EFn.runEffectFn2 isInStack name ns <#> not
   eventIO <- liftEffect $ getEventIO name parent
   _ <- liftEffect $ trackScreen T.Screen T.Info L.CURRENT_SCREEN "screen" name json
@@ -559,7 +578,7 @@ runController st@{name, parent, emitter} json = do
 -- no  -> add screen into cache list
 showScreen :: forall action state returnType
   . Show action => Loggable action
-  => ScopedScreen action state returnType
+  => LoggableScreen action state returnType
   -> (Object Foreign)
   -> Aff returnType
 showScreen st@{name, parent, view} json = do
@@ -577,7 +596,7 @@ showScreen st@{name, parent, view} json = do
   makeAff $ controllerActions eventIO st json (patchAndRun name parent (view eventIO.push))
 
 updateScreen :: forall action state returnType
-     . Show action => Loggable action => ScopedScreen action state returnType
+     . Show action => Loggable action => LoggableScreen action state returnType
     -> Effect Unit
 updateScreen { initialState, view, name , parent } = do
   -- TODO ::
@@ -588,7 +607,7 @@ updateScreen { initialState, view, name , parent } = do
 
 prepareScreen :: forall action state returnType
   . Show action => Loggable action
-  => ScopedScreen action state returnType
+  => LoggableScreen action state returnType
   -> Object Foreign
   -> Aff Unit
 prepareScreen screen@{name, parent, view} json = do

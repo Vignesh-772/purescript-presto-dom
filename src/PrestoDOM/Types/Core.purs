@@ -17,6 +17,7 @@ module PrestoDOM.Types.Core
     , performLog
     , defaultPerformLog
     , defaultSkipLog
+    , LoggableScreen
     ) where
 
 import Prelude
@@ -66,7 +67,9 @@ type ScreenBase action state returnType a =
   | a
   }
 
-type Controller action state returnType = ScreenBase action state returnType (parent :: Maybe String, emitter :: state -> Effect Unit)
+type LoggableScreen action state returnType = ScreenBase action state returnType (parent :: Maybe String, view :: (action -> Effect Unit) -> state -> VDom (Array (Prop (Effect Unit))) (Thunk PrestoWidget (Effect Unit)), logWhitelist :: Array String)
+
+type Controller action state returnType = ScreenBase action state returnType (parent :: Maybe String, emitter :: state -> Effect Unit, logWhitelist :: Array String)
 
 type ScopedScreen action state returnType = ScreenBase action state returnType (parent :: Maybe String, view :: (action -> Effect Unit) -> state -> VDom (Array (Prop (Effect Unit))) (Thunk PrestoWidget (Effect Unit)))
 

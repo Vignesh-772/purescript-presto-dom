@@ -2509,3 +2509,138 @@ export const compareState = function (newState) {
 export const isOldNewStateSame = function () {
   return isStateSame
 }
+
+const workerBlob = new Blob([`
+  onmessage = function (e) {
+
+    // main thread sends last state to compare with, 
+    // stateList which contains the list of actions and state to work on 
+    // whiteListed keys on which we are interested in
+    let {lastState = {}, stateList, keys} = e.data;
+    
+    // Final result to be pushed
+    const logsToPush = []
+
+    // finds difference between a state and lastState
+    // lastState has keys in string form
+    const findDiff = (state) => {
+      let diff = {action : state.action, timeStamp : state.timeStamp}
+      for (const key of keys) {
+        let currState = state.state
+        const unwrappedKeys = key.split(".")
+        let valid = true
+
+        for(const unwrappedKey of unwrappedKeys) {
+          if(typeof currState === 'object' && unwrappedKey in currState) {
+            currState = currState[unwrappedKey]
+          } else {
+            valid = false
+            break
+          }
+        }
+
+        if (valid) {
+          if(key in lastState) {
+            if(lastState[key] !== currState) {
+              lastState[key] = currState
+              diff[key] = currState
+            }
+          } else {
+            lastState[key] = currState
+            diff[key] = currState
+          }
+        } 
+      }
+
+      return diff
+    }
+    
+    // finds diff between all available states in stateList with lastState
+    // and appends to logsToPush if there are some difference
+    const performDiff = () => {
+      for (const state of stateList) {
+        let diff = findDiff(state)
+        if(Object.keys(diff).length > 2) logsToPush.push(diff) // '2' because action and timestamp are added in the beginning
+      }
+    }
+
+    performDiff()
+
+    // update lastState in scopedState
+    postMessage(JSON.stringify({lastState: lastState, logsToPush: logsToPush})) // empty stateList
+  }`
+], { type: "application/javascript" });
+
+// worker thread that works on state difference and logging
+const stateLogger = new Worker(URL.createObjectURL(workerBlob), {name: "StateLogger"});
+
+const STATE_LOGGER_LENGTH_THRESHOLD = 5 // length of stateList after which to process
+const STATE_LOGGER_TIME_THERSHOLD = 10000 // time to wait to process stateList if length is lesser
+
+// add the updates to the scopedState
+export const pushState = (newState) => {
+  return (ns) => {
+    return (action) => {
+      
+      // white list of keys for the screen to log
+      const KEYS = getScopedState(ns).logWhitelist
+
+      // debounce effect for logging
+      if (getScopedState(ns).stateLoggerTimeout) {
+        clearTimeout(getScopedState(ns).stateLoggerTimeout)
+        getScopedState(ns).stateLoggerTimeout = null;
+      }
+
+      // array of itmes like {state, action} to perform logging
+      getScopedState(ns).stateUpdates =  getScopedState(ns).stateUpdates || [];
+      getScopedState(ns).stateUpdates.push({state: newState, action, timeStamp: Date.now()});
+
+      // for debounce effect in logging
+      getScopedState(ns).isLoggerRunning =  getScopedState(ns).isLoggerRunning || false;
+      
+      const callLogger = () => {
+        const stateList = getScopedState(ns).stateUpdates
+
+        if(stateList.length === 0 || getScopedState(ns).isLoggerRunning) return
+
+        const callLoggerThread = () => {
+          getScopedState(ns).stateUpdates = []
+          getScopedState(ns).isLoggerRunning = true
+          stateLogger.postMessage({lastState : getScopedState(ns).lastState, stateList, keys : KEYS})
+        }
+
+        if (stateList.length > STATE_LOGGER_LENGTH_THRESHOLD) {
+          callLoggerThread()
+        } else {
+          getScopedState(ns).stateLoggerTimeout = setTimeout(() => {
+            callLoggerThread()
+          }, STATE_LOGGER_TIME_THERSHOLD)
+        }
+      }
+
+      callLogger()
+
+      stateLogger.onmessage = (e) => {
+        try {
+          const parsedData = JSON.parse(e.data)
+          if (parsedData.logsToPush.length > 0) {
+            tracker._trackAction("system")("info")("stateChangeLogs")({logData: parsedData.logsToPush})()
+          }
+          getScopedState(ns).lastState = parsedData.lastState
+          getScopedState(ns).isLoggerRunning = false
+          callLogger()
+        } catch (error) {
+          console.log("Error => ", error)
+        }
+      }
+    }
+  }
+}
+
+export const setLogWhitelist = (ns) => {
+  return (whiteList) => {
+    return () => {
+      getScopedState(ns).logWhitelist = whiteList
+    }
+  }
+}
