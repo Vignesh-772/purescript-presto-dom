@@ -5,18 +5,21 @@ module PrestoDOM.Properties
   , a_translationX
   , a_translationY
   , absolute
-  , accessibilityHint
   , accessibility
   , accessibilityFocusable
+  , accessibilityHint
   , adjustViewBounds
   , adjustViewWithKeyboard
-  , autoCapitalizationType
+  , alignContent
+  , alignItems
   , alignParentBottom
   , alignParentLeft
   , alignParentRight
   , alpha
   , animation
+  , autoCapitalizationType
   , autoCorrectionType
+  , autoFillHint
   , autoLoop
   , autofocus
   , background
@@ -24,8 +27,8 @@ module PrestoDOM.Properties
   , backgroundDrawable
   , backgroundTint
   , bottomFixed
+  , bottomShift
   , btnBackground
-  , draggingEnabled
   , btnColor
   , buttonClickOverlay
   , buttonTint
@@ -35,7 +38,6 @@ module PrestoDOM.Properties
   , circularLoader
   , classList
   , className
-  , currentItem
   , clickable
   , clipChildren
   , clipToOutline
@@ -44,18 +46,25 @@ module PrestoDOM.Properties
   , colorFilter
   , cornerRadii
   , cornerRadius
+  , currentItem
   , cursorColor
   , curve
+  , dashWidth
   , delay
   , disableClickFeedback
+  , disableKeyboardAvoidance
   , dividerDrawable
+  , draggingEnabled
   , duration
   , elevation
   , ellipsize
+  , enableAnimateOnGone
   , enableRefresh
   , enableRoundedRipple
-  , enableAnimateOnGone
+  , enableShift
   , fillViewport
+  , flexDirection
+  , flexWrap
   , focus
   , focusOut
   , focusable
@@ -71,6 +80,7 @@ module PrestoDOM.Properties
   , fromLeft
   , fromRight
   , fromTop
+  , gapWidth
   , gifUrl
   , gradient
   , gravity
@@ -85,10 +95,11 @@ module PrestoDOM.Properties
   , hoverPath
   , id
   , imageUrl
-  , imageWithFallback
   , imageUrlWithFallback
+  , imageWithFallback
   , inputType
   , inputTypeI
+  , justifyContent
   , layoutGravity
   , layoutTransition
   , letterSpacing
@@ -121,9 +132,10 @@ module PrestoDOM.Properties
   , placeHolder
   , popupMenu
   , position
-  , progressColor
   , progressBarColor
+  , progressColor
   , prop
+  , qr
   , removeClassList
   , rippleColor
   , root
@@ -137,6 +149,7 @@ module PrestoDOM.Properties
   , scrollBarX
   , scrollBarY
   , scrollDirection
+  , selectAllOnFocus
   , selectable
   , selectableItem
   , selected
@@ -144,11 +157,10 @@ module PrestoDOM.Properties
   , selectedTabIndicatorHeight
   , separator
   , separatorRepeat
-  , setDate
   , setCursorAtEnd
+  , setDate
   , setEnable
   , shadow
-  , autoFillHint
   , sheetState
   , shimmer
   , shimmerActive
@@ -164,10 +176,11 @@ module PrestoDOM.Properties
   , textSize
   , textSizeSp
   , toast
+  , topShift
+  , transition
   , translationX
   , translationY
   , translationZ
-  , zIndex
   , typeface
   , unNestPayload
   , url
@@ -180,18 +193,7 @@ module PrestoDOM.Properties
   , visibility
   , weight
   , width
-  , flexDirection
-  , flexWrap
-  , justifyContent
-  , alignItems
-  , alignContent
-  , transition
-  , topShift
-  , bottomShift
-  , selectAllOnFocus
-  , disableKeyboardAvoidance
-  , enableShift
-  , qr
+  , zIndex
   )
   where
 
@@ -979,3 +981,10 @@ qr = prop (PropName "qr")
 
 enableAnimateOnGone :: forall i. Boolean -> Prop i
 enableAnimateOnGone = prop (PropName "enableAnimateOnGone")
+
+
+dashWidth :: forall i. Int -> Prop i
+dashWidth = prop (PropName "dashWidth")
+
+gapWidth :: forall i. Int -> Prop i
+gapWidth = prop (PropName "gapWidth")

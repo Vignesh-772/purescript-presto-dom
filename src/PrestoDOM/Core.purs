@@ -191,6 +191,8 @@ updateProperties namespace screenName = do
                       >>= pure <<< mapProps "shadow" "cornerRadius" decodedVDOM
                       >>= pure <<< mapProps "shadow" "cornerRadii" decodedVDOM
                       >>= pure <<< mapProps "stroke" "padding" decodedVDOM
+                      >>= pure <<< mapProps "stroke" "dashWidth" decodedVDOM
+                      >>= pure <<< mapProps "stroke" "gapWidth" decodedVDOM
                       <#> delete "payload"
                     if isEmpty $ delete "id" updatedProps
                       then pure unit -- Don't send if payload is the only changed key
