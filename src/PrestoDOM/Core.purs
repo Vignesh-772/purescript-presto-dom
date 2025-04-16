@@ -33,13 +33,12 @@ import PrestoDOM.Core.Types (InsertState, UpdateActions, VdomTree)
 import PrestoDOM.Core.Utils (callMicroAppsForListState, extractAndDecode, extractJsonAndDecode, forkoutListState, generateCommands, getListData, replayListFragmentCallbacksImpl, verifyFont, verifyImage, attachUrlImages, isListContainer)
 import PrestoDOM.Events (manualEventsName)
 import PrestoDOM.Generate (generateMyDom)
-import PrestoDOM.Types.Core (class Loggable, PrestoWidget(..), Prop, ScopedScreen, Controller, ScreenBase, PrestoDOM, LoggableScreen)
+import PrestoDOM.Types.Core (class Loggable, PrestoWidget(..), Prop, Controller, ScreenBase, PrestoDOM, LoggableScreen)
 import PrestoDOM.Utils (continue, logAction, addTime2, performanceMeasure, isGenerateVdom, initMeasuringDuration, endMeasuringDuration)
 import Tracker (trackScreen, trackLifeCycle, trackAction)
 import Tracker.Labels as L
 import Tracker.Types (Level(..), Screen(..), Lifecycle(..), Action(System)) as T
 import Unsafe.Coerce (unsafeCoerce)
-import Debug
 
 foreign import setUpBaseState :: String -> Foreign -> Effect Unit
 foreign import insertDom :: forall a. EFn.EffectFn4 String String a Boolean InsertState
@@ -472,17 +471,20 @@ controllerActions {event, push} {initialState, eval, name, globalEvents, parent,
                       Right eState ->
                         case eState of
                           Right (Tuple newstate cmds) ->
-                              let 
-                                _ = if isLogWhiteList logWhitelist then pushState newstate ns (show action) else unit
+                              let _ = if isLogWhiteList logWhitelist then pushState newstate ns (show action) else unit
                               in Right (Right (Tuple newstate cmds))
                           Left state -> 
                               let 
                                 _ = if isLogWhiteList logWhitelist then pushState state ns (show action) else unit
                               in newEitherState
-                      Left state -> 
-                        let 
-                          _ = if isLogWhiteList logWhitelist then pushState state ns (show action) else unit
-                        in newEitherState
+
+                      Left (Tuple eState _) ->
+                        case eState of
+                          Just (Tuple newstate _) ->
+                              let _ = if isLogWhiteList logWhitelist then pushState newstate ns (show action) else unit
+                              in newEitherState
+                          _ -> newEitherState
+                        
 
 
 -- initUIWithNameSpace
