@@ -2510,83 +2510,129 @@ export const isOldNewStateSame = function () {
   return isStateSame
 }
 
-const processLogs = (data) => {
 
-  // main thread sends last state to compare with, 
-  // stateList which contains the list of actions and state to work on 
-  // whiteListed keys on which we are interested in
-  let {
-    lastState = {}, stateList, keys
-  } = data;
+const workerBlob = new Blob([`
+  onmessage = function (e) {
 
-  // Final result to be pushed
-  const logsToPush = []
+    // main thread sends last state to compare with, 
+    // stateList which contains the list of actions and state to work on 
+    // whiteListed keys on which we are interested in
+    let {lastState = {}, stateList, keys, ns} = e.data;
+    // Final result to be pushed
+    const logsToPush = []
 
-  // finds difference between a state and lastState
-  // lastState has keys in string form
-  const findDiff = (_state) => {
-    let diff = {
-      action: _state.action,
-      timeStamp: _state.timeStamp
-    }
-    for (const key of keys) {
-      let currState = _state.state
-      const unwrappedKeys = key.split(".")
-      let valid = true
+    // finds difference between a state and lastState
+    // lastState has keys in string form
+    const findDiff = (state) => {
+      let diff = {action : state.action, timeStamp : state.timeStamp}
+      for (const key of keys) {
+        let currState = state.state
+        const unwrappedKeys = key.split(".")
+        let valid = true
 
-      for (const unwrappedKey of unwrappedKeys) {
-        if (typeof currState === "object" && unwrappedKey in currState) {
-          currState = currState[unwrappedKey]
-        } else {
-          valid = false
-          break
+        for(const unwrappedKey of unwrappedKeys) {
+          if(typeof currState === 'object' && unwrappedKey in currState) {
+            currState = currState[unwrappedKey]
+          } else {
+            valid = false
+            break
+          }
         }
-      }
 
-      if (valid) {
-        if (key in lastState) {
-          if (lastState[key] !== currState) {
+        if (valid) {
+          if(key in lastState) {
+            if(lastState[key] !== currState) {
+              lastState[key] = currState
+              diff[key] = currState
+            }
+          } else {
             lastState[key] = currState
             diff[key] = currState
           }
-        } else {
-          lastState[key] = currState
-          diff[key] = currState
-        }
+        } 
+      }
+
+      return diff
+    }
+    
+    // finds diff between all available states in stateList with lastState
+    // and appends to logsToPush if there are some difference
+    const performDiff = () => {
+      for (const state of stateList) {
+        let diff = findDiff(state)
+        if(Object.keys(diff).length > 2) logsToPush.push(diff) // '2' because action and timestamp are added in the beginning
       }
     }
 
-    return diff
-  }
+    performDiff()
 
-  // finds diff between all available states in stateList with lastState
-  // and appends to logsToPush if there are some difference
-  const performDiff = () => {
-    for (const _state of stateList) {
-      let diff = findDiff(_state)
-      if (Object.keys(diff).length > 2) logsToPush.push(diff) // '2' because action and timestamp are added in the beginning
+    // update lastState in scopedState
+    postMessage(JSON.stringify({lastState: lastState, logsToPush: logsToPush, ns: ns, keys: keys})) // empty stateList
+  }`], {
+  type: "application/javascript"
+});
+
+// worker thread that works on state difference and logging
+const stateLogger = new Worker(URL.createObjectURL(workerBlob), {
+  name: "StateLogger"
+});
+
+
+stateLogger.onmessage = (e) => {
+  try {
+    const parsedData = JSON.parse(e.data)
+    if (parsedData.logsToPush && parsedData.logsToPush.length > 0) {
+      tracker._trackAction("system")("info")("stateChangeLogs")({
+        logData: parsedData.logsToPush
+      })()
     }
-  }
-
-  performDiff()
-
-  // update lastState in scopedState
-  return {
-    lastState: lastState,
-    logsToPush: logsToPush
-  } // empty stateList
+    getScopedState(parsedData.ns).lastState = parsedData.lastState
+    getScopedState(parsedData.ns).isLoggerRunning = false
+    callLogger(parsedData.ns, parsedData.keys)
+  } catch (error) {}
 }
 
 const STATE_LOGGER_LENGTH_THRESHOLD = 5 // length of stateList after which to process
 const STATE_LOGGER_TIME_THERSHOLD = 10000 // time to wait to process stateList if length is lesser
 
+const callLogger = (ns, keys) => {
+  const stateList = getScopedState(ns).stateUpdates
+
+  if (stateList.length === 0 || getScopedState(ns).isLoggerRunning) {
+    return
+  }
+
+  const callLoggerThread = () => {
+    getScopedState(ns).stateUpdates = []
+    getScopedState(ns).isLoggerRunning = true
+    try {
+      stateLogger.postMessage({
+        lastState: getScopedState(ns).lastState,
+        stateList,
+        keys,
+        ns
+      })
+    } catch (error) {
+      console.error("Error in callLoggerThread => ", error)
+      getScopedState(ns).isLoggerRunning = false
+    }
+  }
+
+  if (stateList.length > STATE_LOGGER_LENGTH_THRESHOLD) {
+    callLoggerThread()
+  } else {
+    getScopedState(ns).stateLoggerTimeout = setTimeout(() => {
+      callLoggerThread()
+    }, STATE_LOGGER_TIME_THERSHOLD)
+  }
+}
+
 // add the updates to the scopedState
 export const pushState = (newState) => {
   return (ns) => {
     return (action) => {
-
       // white list of keys for the screen to log
-      const KEYS = getScopedState(ns).logWhitelist
+      const keys = getScopedState(ns).logWhitelist
 
       // debounce effect for logging
       if (getScopedState(ns).stateLoggerTimeout) {
@@ -2605,39 +2651,7 @@ export const pushState = (newState) => {
       // for debounce effect in logging
       getScopedState(ns).isLoggerRunning = getScopedState(ns).isLoggerRunning || false;
 
-      const callLogger = () => {
-        const stateList = getScopedState(ns).stateUpdates
-
-        if (stateList.length === 0 || getScopedState(ns).isLoggerRunning) return
-
-        const callLoggerThread = () => {
-          getScopedState(ns).stateUpdates = []
-          getScopedState(ns).isLoggerRunning = true
-          const parsedData = processLogs({
-            lastState: getScopedState(ns).lastState,
-            stateList,
-            keys: KEYS
-          })
-          if (parsedData.logsToPush.length > 0) {
-            tracker._trackAction("system")("info")("stateChangeLogs")({
-              logData: parsedData.logsToPush
-            })()
-          }
-          getScopedState(ns).lastState = parsedData.lastState
-          getScopedState(ns).isLoggerRunning = false
-          callLogger()
-        }
-
-        if (stateList.length > STATE_LOGGER_LENGTH_THRESHOLD) {
-          callLoggerThread()
-        } else {
-          getScopedState(ns).stateLoggerTimeout = setTimeout(() => {
-            callLoggerThread()
-          }, STATE_LOGGER_TIME_THERSHOLD)
-        }
-      }
-
-      callLogger()
+      callLogger(ns, keys)
     }
   }
 }
