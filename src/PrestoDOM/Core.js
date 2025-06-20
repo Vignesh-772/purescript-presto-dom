@@ -2477,6 +2477,9 @@ export const setScreenInActive = function (ns) {
 export const setScreenActive = function (ns) {
   return function (_screen) {
     return function () {
+      if (window.JBridge && window.JBridge.runInJuspayBrowser) {
+        window.JBridge.runInJuspayBrowser("onEvent", JSON.stringify({event: "screen_active", payload: {screen_active: _screen}}), "");
+      }
       getScopedState(ns).screenActive[_screen] = true
     }
   }
